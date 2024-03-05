@@ -1,0 +1,22 @@
+servers:
+  - displayName: "vSphere Production"
+    host: "10.0.0.1"
+    username: "admin"
+    password: "password"
+  - displayName: "vSphere Test"
+    host: "10.0.0.2"
+    username: "admin"
+    password: "password"
+
+controllers:
+  - displayName: "Controller Production"
+    controllerHost: "https://xxxx.saas.appdynamics.com"
+    controllerPort: 443
+    controllerSslEnabled: true
+    clientId: "abc@def"
+    clientSecret: "1895e99f-aa84-26cf-65d0-319403a1b4be"
+
+numberOfThreads: 30
+metricPrefix: ""
+encryptionKey: ""
+frequency: 120000
