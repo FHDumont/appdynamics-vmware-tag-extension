@@ -1,6 +1,9 @@
 package com.appdynamics.extensions.vmwaretag;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -44,32 +47,30 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	@Override
 	public void run() {
 		while (true) {
+			Instant startTime = Instant.now();
+
 			try {
 				logger.info("{} Starting task", Common.getLogHeader(this, "run"));
 
 				threads = new ArrayList<>();
 
 				Map<String, Object> yamlConfig;
-				// TEMPORÁRIO, PARA DEBUG
-				// LER ARQUIVO DE CONFIG, SIMULANDO O PLUGIN
+				// TEMPORARY, FOR DEBUGGING
+				// READ CONFIGURATION FILE, SIMULATING THE PLUGIN
 				// Yaml yaml = new Yaml();
 				// InputStream inputStream = new FileInputStream(
 				// "/Users/fdumont/Developer/GitHub/appdynamics-vsphere-tag-extension/src/main/resources/conf/config.yml");
-				// // Carrega o arquivo YAML em um mapa de objetos
 				// yamlConfig = yaml.load(inputStream);
 
-				// LEITURA OFICIAL DO YAML PELO PLUGIN
-				// if (1 == 2) {
 				yamlConfig = (Map<String, Object>) monitorContextConfig.getConfigYml();
-				// }
 
-				// LISTA DE CONTROLLERS
-				// OS DADOS DO VSPHERE SÃO CARREGADOS SÓ UMA VEZ, PORÉM O CLIENTE PODE TER MAIS
-				// DE UMA CONTROLLER, ENTÃO NÃO DEVE IR AO VSPHERE PARA CADA CONTROLLER, DEVE IR
-				// NO VPSHERE APENAS UMA VEZ E DEPOIS NO LOOP DOS SERVERS DE TODAS AS
-				// CONTROLLERS FAZER A VALIDAÇÃO
+				// LIST OF CONTROLLERS
+				// VSPHERE DATA IS LOADED ONLY ONCE, BUT THE CUSTOMER MAY HAVE MORE THAN ONE
+				// CONTROLLER, SO IT SHOULD NOT GO TO VSPHERE FOR EACH CONTROLLER, IT SHOULD GO
+				// TO VSPHERE ONLY ONCE AND THEN IN THE LOOP OF SERVERS OF ALL CONTROLLERS TO
+				// PERFORM VALIDATION
 
-				// ==> CONTROLLER CONFIGS
+				// ==> CONTROLLER CONFIGURATIONS
 				ControllerInfo[] listControllerInfo = new ObjectMapper().convertValue(
 						yamlConfig.get(Constants.CONTROLLERS),
 						ControllerInfo[].class);
@@ -79,7 +80,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 					listControllerService.put(ci.getControllerHost(), new ControllerService(ci));
 				}
 
-				// ==>VMWARE CONFIGS
+				// ==>VMWARE CONFIGURATIONS
 				VMWareConfig[] listVMWareConfig = new ObjectMapper().convertValue(
 						yamlConfig.get(Constants.VMWARE_SERVERS),
 						VMWareConfig[].class);
@@ -89,42 +90,44 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 					listVMWareService.put(vc.getHost(), new VMWareService(vc));
 				}
 
-				// CRIANDO AS THREADS PARA AS CONTROLLERS
+				// CREATING THREADS FOR THE CONTROLLERS
+				// LOADING ALL SERVERS (MACHINE AGENTS)
 				listControllerService.forEach((controllerHost, controllerService) -> {
 					ServerThread serverThread = new ServerThread(controllerService);
 					serverThread.setName(controllerHost);
 					threads.add(serverThread);
 				});
 
-				// CRIANDO AS THREADS PARA OS SERVERS VMWARE
+				// CREATING THREADS FOR VMWARE SERVERS
+				// LOADING DATACENTERS, CLUSTERS, HOSTS, AND VIRTUAL MACHINES
 				listVMWareService.forEach((host, vmwareService) -> {
-					// BUSCAR AS VMS
+					// RETRIEVING VIRTUAL MACHINES
 					DataCenterThread datacenterThread = new DataCenterThread(vmwareService);
 					datacenterThread.setName(host);
 					threads.add(datacenterThread);
 
-					// BUSCAR EVENTOS
+					// RETRIEVING MIGRATION EVENTS
 					EventsThread eventsThread = new EventsThread(vmwareService);
 					eventsThread.setName(host);
 					threads.add(eventsThread);
 				});
 
-				logger.info("{} Iniciando threads de captura de dados...", Common.getLogHeader(this, "run"));
+				logger.info("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.start();
 				}
 
-				logger.info("{} Aguardando finalização das threads de captura de dados...",
+				logger.info("{} Waiting for data capture threads to finish...",
 						Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.join();
 				}
 
-				logger.info("{} Finalizado threads de captura de dados!", Common.getLogHeader(this, "run"));
+				logger.info("{} Data capture threads finished!", Common.getLogHeader(this, "run"));
 
-				// MATCH TAGS
+				// MATCHING MACHINE AGENTS WITH VIRTUAL MACHINES
 				threads = new ArrayList<>();
-				logger.info("{} Iniciando threads de match...", Common.getLogHeader(this, "run"));
+				logger.info("{} Starting match threads...", Common.getLogHeader(this, "run"));
 				listControllerService.forEach((host, controlerService) -> {
 					Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()));
 					matchThread.setName(host);
@@ -132,20 +135,21 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 					threads.add(matchThread);
 				});
 
-				logger.info("{} Aguardando finalização das threads match...", Common.getLogHeader(this, "run"));
+				logger.info("{} Waiting for data match threads to finish...", Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.join();
 				}
 				threads = new ArrayList<>();
-				logger.info("{} Finalzado threads de match!", Common.getLogHeader(this, "run"));
+				logger.info("{} Data match threads finished!", Common.getLogHeader(this, "run"));
 
 			} catch (Exception e) {
 				logger.error("{} Exception on running task {}", Common.getLogHeader(this, "run"), e.getMessage(), e);
 			}
 
 			try {
-				logger.info("{} Waiting next round {}ms", Common.getLogHeader(this, "run"),
-						this.monitorContextConfig.getConfigYml().get(Constants.FREQUENCY));
+				Duration duration = Duration.between(startTime, Instant.now());
+				logger.info("{} Execution time {}s, waiting next round {}ms", Common.getLogHeader(this, "run"),
+						duration.getSeconds(), this.monitorContextConfig.getConfigYml().get(Constants.FREQUENCY));
 				Thread.sleep(
 						Integer.valueOf(this.monitorContextConfig.getConfigYml().get(Constants.FREQUENCY).toString()));
 			} catch (Exception e) {
