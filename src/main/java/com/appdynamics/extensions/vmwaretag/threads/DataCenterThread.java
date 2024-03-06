@@ -28,7 +28,7 @@ public class DataCenterThread extends Thread {
 
 	public void run() {
 
-		logger.info("{} Starting to find datacenters", Common.getLogHeader(this, "run"));
+		logger.info("{} Starting datacenter search", Common.getLogHeader(this, "run"));
 		List<Thread> listThread = new ArrayList<>();
 
 		Folder rootFolder = this.vmWareService.getServiceInstance().getRootFolder();
@@ -71,25 +71,25 @@ public class DataCenterThread extends Thread {
 
 		try {
 
-			logger.info("{} Iniciando threads...", Common.getLogHeader(this, "run"));
+			logger.info("{} Starting threads of HostThreads...", Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.start();
 			}
 
-			logger.info("{} Joinning threads e aguardando finalização das threads...",
+			logger.info("{} Joinning threads and waiting it to finish...",
 					Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.join();
 			}
 
-			logger.info("{} Juntando as VMs encontradas em todos os hosts...", Common.getLogHeader(this, "run"));
+			logger.info("{} Combining the VMs found on all hosts...", Common.getLogHeader(this, "run"));
 			this.vmWareService.listVMWareInfo = new HashMap<>();
 			for (Thread thread : listThread) {
 				this.vmWareService.listVMWareInfo.putAll(((HostThread) thread).getVMs());
 			}
 			logger.info("{} Total Hosts found [{}]", Common.getLogHeader(this, "run"),
 					this.vmWareService.listVMWareInfo.size());
-			logger.info("{} Finalizado!", Common.getLogHeader(this, "run"));
+			logger.info("{} Finalized!", Common.getLogHeader(this, "run"));
 
 		} catch (Exception e) {
 			e.printStackTrace();

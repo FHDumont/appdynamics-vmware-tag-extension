@@ -24,7 +24,7 @@ public class VMWareService {
 
 	public VMWareService(VMWareConfig vmwareConfig) throws Exception {
 		this.vmwareConfig = vmwareConfig;
-		logger.info("{} Display Name: {} // Host: {} ",
+		logger.info("{} Creating VMWare Service for [{}] and host [{}] ",
 				Common.getLogHeader(this, "constructor"),
 				vmwareConfig.getDisplayName(),
 				vmwareConfig.getHost());
@@ -34,11 +34,15 @@ public class VMWareService {
 
 	protected void connect() {
 		String url = "https://" + this.vmwareConfig.getHost() + "/sdk";
-		logger.info("{} Connecting VMWare {}", Common.getLogHeader(this, "connect"), url);
+		logger.info("{} Connecting to VMWare {}", Common.getLogHeader(this, "connect"), url);
 		try {
-			ServiceInstance serviceInstance = new ServiceInstance(new URL(url),
+			ServiceInstance serviceInstance = new ServiceInstance(
+					new URL(url),
 					vmwareConfig.getUsername(),
-					vmwareConfig.getPassword(), true);
+					vmwareConfig.getPassword(),
+					true,
+					30000, 0);
+
 			this.serviceInstance = serviceInstance;
 		} catch (Exception e) {
 			logger.error("{} Unable to connect to the host [{}]", Common.getLogHeader(this, "connect"),

@@ -23,7 +23,7 @@ public class EventsThread extends Thread {
 
 	public void run() {
 
-		logger.info("{} Starting to find vmotion events", Common.getLogHeader(this, "run"));
+		logger.info("{} Starting migration events search...", Common.getLogHeader(this, "run"));
 		List<Thread> listThread = new ArrayList<>();
 
 		this.vmWareService.listEvents = new ConcurrentHashMap<>();
@@ -33,33 +33,33 @@ public class EventsThread extends Thread {
 			thread.setName(this.vmWareService.getVmwareConfig().getHost());
 			listThread.add(thread);
 		} catch (Exception e) {
-			logger.error("{} Unable get cluster [{}]",
+			logger.error("{} Unable get events from cluster [{}]",
 					Common.getLogHeader(this, "run"),
 					this.vmWareService.getVmwareConfig().getHost(), e);
 		}
 
 		try {
 
-			logger.info("{} Iniciando threads...", Common.getLogHeader(this, "run"));
+			logger.info("{} Starting threads of EventDetailThread...", Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.start();
 			}
 
-			logger.info("{} Joinning threads e aguardando finalização das threads...",
+			logger.info("{} Joinning threads and waiting it to finish....",
 					Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.join();
 			}
 
-			logger.info("{} Juntando os eventos encontrados em todos as vms...", Common.getLogHeader(this, "run"));
+			logger.info("{} Combining the events found on all virtual machines...", Common.getLogHeader(this, "run"));
 			this.vmWareService.listEvents = new HashMap<>();
 			for (Thread thread : listThread) {
 				this.vmWareService.listEvents.putAll(((EventDetailThread) thread).getEvents());
 			}
-			logger.info("{} Total eventos found [{}]",
+			logger.info("{} Total events found [{}]",
 					Common.getLogHeader(this, "run"),
 					this.vmWareService.listEvents.size());
-			logger.info("{} Finalizado!", Common.getLogHeader(this, "run"));
+			logger.info("{} Finalized!", Common.getLogHeader(this, "run"));
 
 		} catch (Exception e) {
 			e.printStackTrace();

@@ -63,7 +63,7 @@ public class EventDetailThread extends Thread {
 				}
 			}
 
-			logger.info("{} Total eventos found [{}] for this cluster [{}]",
+			logger.info("{} Total events found [{}] for this cluster [{}]",
 					Common.getLogHeader(this, "run"),
 					this.listEvent.size(),
 					this.serviceInstance.getAboutInfo().getName());

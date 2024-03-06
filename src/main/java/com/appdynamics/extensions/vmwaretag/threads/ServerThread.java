@@ -17,11 +17,11 @@ public class ServerThread extends Thread {
 	}
 
 	public void run() {
-		logger.info("{} Searching servers...", Common.getLogHeader(this, "run"));
+		logger.info("{} Searching servers (machine agents)...", Common.getLogHeader(this, "run"));
 
 		try {
 			controllerService.refreshServers();
-			logger.info("{} Found {} hosts",
+			logger.info("{} Found {} servers (machine agent)",
 					Common.getLogHeader(this, "run"),
 					this.controllerService.listServers.size());
 		} catch (Exception e) {

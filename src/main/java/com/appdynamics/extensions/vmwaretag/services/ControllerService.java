@@ -30,7 +30,7 @@ public class ControllerService {
 	public ControllerService(ControllerInfo controllerInfo) throws Exception {
 		this.controllerInfo = controllerInfo;
 
-		logger.info("{} Controller: {} // ClientId: {} ",
+		logger.info("{} Connecting to controller: [{}] using ClientId: [{}]",
 				Common.getLogHeader(this, "constructor"),
 				this.controllerInfo.getControllerHost(),
 				this.controllerInfo.getClientId());
@@ -55,10 +55,11 @@ public class ControllerService {
 		HttpRequest httpRequest;
 		HttpResponse<String> httpResponse;
 
-		logger.debug("{} URL: {} // payload: {} ", Common.getLogHeader(this, "getRequest"), uri, payload);
+		logger.debug("{} Requesting URL: [{}] and payload: [{}]", Common.getLogHeader(this, "getRequest"), uri,
+				payload);
 
-		// PARA CRIAR O TOKEN NÃO PODE HAVER ACCEPT NO HEADER E O CONTENT-TYPE PRECISA
-		// SER DE FORM
+		// TO CREATE THE TOKEN, THERE MUST BE NO ACCEPT IN THE HEADER AND THE
+		// CONTENT-TYPE SHOULD BE CONTENT TYPE OF FORM
 		if (uri.equalsIgnoreCase("/controller/api/oauth/access_token")) {
 			logger.debug("{} Request type POST", Common.getLogHeader(this, "getRequest"));
 			httpRequest = HttpRequest.newBuilder()
@@ -88,8 +89,9 @@ public class ControllerService {
 		}
 
 		httpResponse = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-		logger.debug("{} Response Status Code: {}", Common.getLogHeader(this, "getRequest"), httpResponse.statusCode());
-		logger.debug("{} Response Status Body: {}", Common.getLogHeader(this, "getRequest"), httpResponse.body());
+		logger.debug("{} Response Status Code: [{}]", Common.getLogHeader(this, "getRequest"),
+				httpResponse.statusCode());
+		logger.debug("{} Response Status Body: [{}]", Common.getLogHeader(this, "getRequest"), httpResponse.body());
 
 		return httpResponse;
 	}
@@ -121,7 +123,8 @@ public class ControllerService {
 			this.listServers.put(server.getServerName().toLowerCase(), server);
 		}
 
-		logger.info("{} Found {} hosts", Common.getLogHeader(this, "refreshServers"), this.listServers.size());
+		logger.info("{} Found {} servers (machine agents)", Common.getLogHeader(this, "refreshServers"),
+				this.listServers.size());
 
 	}
 
@@ -130,13 +133,15 @@ public class ControllerService {
 			this.refreshServers();
 		}
 
-		logger.info("{} Found {} servers", Common.getLogHeader(this, "getServers"), this.listServers.size());
+		logger.info("{} Found {} servers (machine agents)", Common.getLogHeader(this, "getServers"),
+				this.listServers.size());
 
 		return this.listServers;
 	}
 
 	public void publishTags(String jsonAPI) throws Exception {
-		logger.info("{} Publishing tags...", Common.getLogHeader(this, "publishTags"));
+		logger.info("{} Publishing tags", Common.getLogHeader(this, "publishTags"));
+		logger.debug("{} Tags [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
 
 		if (jsonAPI != null && !jsonAPI.equals("")) {
 			HttpResponse<String> httpResponse = getRequest("/controller/restui/tags/tagEntitiesInBatch", jsonAPI);
@@ -151,7 +156,7 @@ public class ControllerService {
 	}
 
 	public boolean findAPMCorrelation(Server server) throws Exception {
-		logger.debug("{} Finding correlation for server {} {}",
+		logger.debug("{} Finding correlation for server [{}] [{}]",
 				Common.getLogHeader(this, "findAPMCorrelation"),
 				server.getMachineId(),
 				server.getServerName());

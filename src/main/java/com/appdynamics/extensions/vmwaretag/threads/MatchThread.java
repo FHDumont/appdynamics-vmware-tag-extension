@@ -41,9 +41,12 @@ public class MatchThread extends Thread {
 	}
 
 	public void run() {
+		logger.info("{} Starting matching", Common.getLogHeader(this, "run"));
 		for (VMWareService vmwareService : listVMWareService) {
 			try {
 
+				logger.info("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
+						vmwareService.getVmwareConfig().getDisplayName(), vmwareService.getVmwareConfig().getHost());
 				Map<String, VMWareInfo> listVMs = vmwareService.getVMs();
 				List<Server> listServerTagged = new ArrayList<>();
 				Map<String, Event> listEvents = vmwareService.getEvents();
@@ -63,7 +66,7 @@ public class MatchThread extends Thread {
 							vmServerTagged.setVmMOR(vmHost.getMor());
 							vmServerTagged.setHostStats(vmHost.getHostStats());
 
-							// POSSUI EVENTO DE MIGRAÇÃO
+							// HAS MIGRATION EVENT
 							Event event = listEvents.get(serverName);
 							if (event != null) {
 								logger.debug("{}     --> Event found", Common.getLogHeader(this, "run"));
@@ -91,14 +94,13 @@ public class MatchThread extends Thread {
 
 					logger.debug("{} Server Tagged {} ", server.toString(), Common.getLogHeader(this, "run"));
 
-					// TODOS OS SERVERS QUE POSSUIREM APPLICATION TERAO O CAMPO APMCORRELATION
-					// PREENCHIDO
-					// ASSIM AO CRIAR O JSON PODE CRIAR JSONS ESPECÍFICOS PARA CADA TIPO DE OBJETO
+					// ALL SERVERS THAT HAVE APPLICATION WILL HAVE THE APMCORRELATION FIELD FILLED,
+					// SO WHEN CREATING THE JSON, YOU CAN CREATE SPECIFIC JSONS FOR EACH OBJECT TYPE
 					this.controllerService.findAPMCorrelation(server);
 
 					listServerToPublish.add(server);
 
-					// publicar a cada quantidade de entidades servers encontrados, independente de
+					// Publish after each number of servers entities found, regardless of
 					// correlation
 					if (idx > 0 && idx % 25 == 0) {
 						this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
