@@ -15,6 +15,9 @@ controllers:
     controllerSslEnabled: true
     clientId: "abc@def"
     clientSecret: "1895e99f-aa84-26cf-65d0-319403a1b4be"
+    proxyHost: server.proxy.com
+    proxyPort: 8090
+    proxySsl: false
 
 numberOfThreads: 30
 metricPrefix: "Custom Metrics|VMWareTag"

@@ -1,9 +1,15 @@
 package com.appdynamics.extensions.vmwaretag.services;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Proxy;
+import java.net.ProxySelector;
+import java.net.SocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -39,6 +45,35 @@ public class ControllerService {
 				this.controllerInfo.getControllerHost(),
 				this.controllerInfo.getClientId());
 
+		logger.info("{} Verificando necessidade de proxy [{}]",
+				Common.getLogHeader(this, "constructor"),
+				this.controllerInfo.getProxyHost());
+
+		if (this.controllerInfo.getProxyHost() != null && !this.controllerInfo.getProxyHost().equals("")) {
+			logger.info("{} Setting proxy [{}] [{}] [{}]",
+					Common.getLogHeader(this, "constructor"),
+					this.controllerInfo.getProxyHost(),
+					this.controllerInfo.getProxyPort(),
+					this.controllerInfo.getProxySsl());
+
+			Proxy proxy = new Proxy(Proxy.Type.HTTP,
+					new InetSocketAddress(this.controllerInfo.getProxyHost(),
+							this.controllerInfo.getProxyPort()));
+
+			ProxySelector.setDefault(new ProxySelector() {
+				@Override
+				public List<Proxy> select(URI uri) {
+					return List.of(proxy);
+				}
+
+				@Override
+				public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
+					if (uri == null || sa == null || ioe == null) {
+						throw new IllegalArgumentException("Argumentos não podem ser nulos.");
+					}
+				}
+			});
+		}
 		this.client = HttpClient.newHttpClient();
 
 		String payload = String.format(

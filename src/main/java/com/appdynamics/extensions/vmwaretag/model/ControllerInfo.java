@@ -8,6 +8,33 @@ public class ControllerInfo {
 	private boolean controllerSslEnabled;
 	private String clientId;
 	private String clientSecret;
+	private String proxyHost;
+	private int proxyPort;
+	private Boolean proxySsl;
+
+	public String getProxyHost() {
+		return proxyHost;
+	}
+
+	public void setProxyHost(String proxyHost) {
+		this.proxyHost = proxyHost;
+	}
+
+	public int getProxyPort() {
+		return proxyPort;
+	}
+
+	public void setProxyPort(int proxyPort) {
+		this.proxyPort = proxyPort;
+	}
+
+	public Boolean getProxySsl() {
+		return proxySsl;
+	}
+
+	public void setProxySsl(Boolean proxySsl) {
+		this.proxySsl = proxySsl;
+	}
 
 	public String getControllerHost() {
 		return controllerHost;
