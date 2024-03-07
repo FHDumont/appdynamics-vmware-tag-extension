@@ -32,8 +32,8 @@ public class MatchThread extends Thread {
 	private ControllerService controllerService;
 	private List<VMWareService> listVMWareService;
 
-	private Map<Integer, Integer> listApplicationWithEvent;
-	private Map<Integer, Integer> listTierWithEvent;
+	private Map<Integer, Boolean> listApplicationWithMigration;
+	private Map<Integer, Boolean> listTierWithEvent;
 
 	public MatchThread(ControllerService controllerService, List<VMWareService> listVMWareService) {
 		this.controllerService = controllerService;
@@ -85,7 +85,7 @@ public class MatchThread extends Thread {
 
 				logger.info("{} Total Server Tagged {} ", Common.getLogHeader(this, "run"), listServerTagged.size());
 
-				listApplicationWithEvent = new HashMap<>();
+				listApplicationWithMigration = new HashMap<>();
 				listTierWithEvent = new HashMap<>();
 				List<Server> listServerToPublish = new ArrayList<>();
 
@@ -99,6 +99,8 @@ public class MatchThread extends Thread {
 					this.controllerService.findAPMCorrelation(server);
 
 					listServerToPublish.add(server);
+
+					// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
 
 					// Publish after each number of servers entities found, regardless of
 					// correlation
@@ -115,7 +117,7 @@ public class MatchThread extends Thread {
 				}
 
 				this.controllerService.publishTags(createJsonAPI(null, EntityType.Application));
-				this.listApplicationWithEvent.forEach((id, total) -> {
+				this.listApplicationWithMigration.forEach((id, total) -> {
 					logger.debug(("{} Application [{}] and total events [{}]"),
 							Common.getLogHeader(this, "run"), id, total);
 				});
@@ -143,11 +145,11 @@ public class MatchThread extends Thread {
 
 		if (entityType.equals(EntityType.Application)) {
 			TagEntity tagEntity;
-			for (Integer applicationId : this.listApplicationWithEvent.keySet()) {
+			for (Integer applicationId : this.listApplicationWithMigration.keySet()) {
 				tagEntity = new TagEntity();
 				tagEntity.setEntityId(applicationId);
 				tagEntity.setEntityName(String.valueOf(applicationId));
-				tagEntity.setTags(createTagsForAppTier(this.listApplicationWithEvent.get(applicationId)));
+				tagEntity.setTags(createTagsForAppTier(this.listApplicationWithMigration.get(applicationId)));
 				listEntities.add(tagEntity);
 			}
 
@@ -160,7 +162,6 @@ public class MatchThread extends Thread {
 				tagEntity.setTags(createTagsForAppTier(this.listTierWithEvent.get(tierId)));
 				listEntities.add(tagEntity);
 			}
-
 		} else {
 			for (Server server : listServer) {
 				TagEntity tagEntity;
@@ -174,15 +175,11 @@ public class MatchThread extends Thread {
 						listEntities.add(tagEntity);
 
 						if (apmCorrelation.getAppId() > 0) {
-							Integer totalEvents = this.listApplicationWithEvent.get(apmCorrelation.getAppId());
-							this.listApplicationWithEvent.put(apmCorrelation.getAppId(),
-									totalEvents == null ? 1 : totalEvents + 1);
+							this.listApplicationWithMigration.put(apmCorrelation.getAppId(), server.isHadMigration());
 						}
 
 						if (apmCorrelation.getTierId() > 0) {
-							Integer totalEvents = this.listTierWithEvent.get(apmCorrelation.getTierId());
-							this.listTierWithEvent.put(apmCorrelation.getTierId(),
-									totalEvents == null ? 1 : totalEvents + 1);
+							this.listTierWithEvent.put(apmCorrelation.getTierId(), server.isHadMigration());
 						}
 					}
 
@@ -220,12 +217,12 @@ public class MatchThread extends Thread {
 
 	}
 
-	private List<TagKeys> createTagsForAppTier(Integer totalEvents) {
+	private List<TagKeys> createTagsForAppTier(Boolean hadMigration) {
 		List<TagKeys> listKeys = new ArrayList<>();
 
 		TagKeys tagKey = new TagKeys();
-		tagKey.setKey("ESX Total Migration Last 24h");
-		tagKey.setValue(String.valueOf(totalEvents));
+		tagKey.setKey("ESX Had Migration Last 24h");
+		tagKey.setValue(hadMigration ? "yes" : "no");
 		listKeys.add(tagKey);
 
 		tagKey = new TagKeys();
@@ -271,16 +268,16 @@ public class MatchThread extends Thread {
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Had Migration Last 24h");
-		tagKey.setValue(server.isHadMigration() ? "1" : "0");
+		tagKey.setValue(server.isHadMigration() ? "yes" : "no");
 		listKeys.add(tagKey);
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Overall CPU Usage");
-		tagKey.setValue(server.getHostStats().getOverallCpuUsage());
+		tagKey.setValue(server.getHostStats().getOverallCpuUsage() + " MHz");
 		listKeys.add(tagKey);
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Overall CPU Usage %");
-		tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc());
+		tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc() + " %");
 		listKeys.add(tagKey);
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX CPU Cores");
@@ -288,11 +285,15 @@ public class MatchThread extends Thread {
 		listKeys.add(tagKey);
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Overall Memory Usage");
-		tagKey.setValue(server.getHostStats().getOverallMemoryUsage());
+		tagKey.setValue(server.getHostStats().getOverallMemoryUsage() + " GB");
+		listKeys.add(tagKey);
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Overall Memory Usage %");
+		tagKey.setValue(server.getHostStats().getOverallMemoryPerc() + " %");
 		listKeys.add(tagKey);
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Memory Size");
-		tagKey.setValue(server.getHostStats().getMemorySize());
+		tagKey.setValue(server.getHostStats().getMemorySize() + " GB");
 		listKeys.add(tagKey);
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Total Virtual Machine");

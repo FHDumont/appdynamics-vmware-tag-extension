@@ -15,6 +15,8 @@ import com.appdynamics.extensions.vmwaretag.model.AccessToken;
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
 import com.appdynamics.extensions.vmwaretag.model.Server;
 import com.appdynamics.extensions.vmwaretag.util.Common;
+import com.appdynamics.extensions.vmwaretag.util.Constants;
+import com.appdynamics.extensions.vmwaretag.util.EntityType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 public class ControllerService {
@@ -42,49 +44,63 @@ public class ControllerService {
 				controllerInfo.getClientId(),
 				controllerInfo.getClientSecret());
 
-		HttpResponse<String> httpResponse = getRequest("/controller/api/oauth/access_token", payload);
+		HttpResponse<String> httpResponse = getRequest("/controller/api/oauth/access_token",
+				Constants.HTTP_METHOD_POST, payload);
 		this.accessToken = new ObjectMapper().readValue(httpResponse.body(),
 				AccessToken.class);
 
 		this.listServers = new ConcurrentHashMap<>();
 	}
 
-	public HttpResponse<String> getRequest(String uri, String payload)
-			throws Exception {
+	public HttpResponse<String> getRequest(String uri, String method, String payload) throws Exception {
 
-		HttpRequest httpRequest;
+		HttpRequest httpRequest = null;
 		HttpResponse<String> httpResponse;
 
-		logger.debug("{} Requesting URL: [{}] and payload: [{}]", Common.getLogHeader(this, "getRequest"), uri,
-				payload);
+		logger.debug("{} Requesting URL: [{}], method [{}] and payload: [{}]", Common.getLogHeader(this, "getRequest"),
+				uri, method, payload);
 
 		// TO CREATE THE TOKEN, THERE MUST BE NO ACCEPT IN THE HEADER AND THE
 		// CONTENT-TYPE SHOULD BE CONTENT TYPE OF FORM
 		if (uri.equalsIgnoreCase("/controller/api/oauth/access_token")) {
-			logger.debug("{} Request type POST", Common.getLogHeader(this, "getRequest"));
+			logger.debug("{} It's access_token", Common.getLogHeader(this, "getRequest"));
 			httpRequest = HttpRequest.newBuilder()
 					.uri(new URI(controllerInfo.getControllerHost() + "/controller/api/oauth/access_token"))
 					.header("Content-Type", "application/x-www-form-urlencoded")
 					.POST(HttpRequest.BodyPublishers.ofString(payload))
 					.build();
 		} else {
-			if (payload != null && !payload.equals("")) {
-				logger.debug("{} Request type POST", Common.getLogHeader(this, "getRequest"));
-				httpRequest = HttpRequest.newBuilder()
-						.uri(new URI(controllerInfo.getControllerHost() + uri))
-						.header("Authorization", getBearerToken())
-						.header("Content-Type", "application/json")
-						.header("Accept", "application/json, text/plain, */*")
-						.POST(HttpRequest.BodyPublishers.ofString(payload))
-						.build();
-			} else {
-				logger.debug("{} Request type GET", Common.getLogHeader(this, "getRequest"));
-				httpRequest = HttpRequest.newBuilder()
-						.uri(new URI(controllerInfo.getControllerHost() + uri))
-						.header("Authorization", getBearerToken())
-						.header("Content-Type", "application/json")
-						.header("Accept", "application/json, text/plain, */*")
-						.build();
+			switch (method) {
+				case Constants.HTTP_METHOD_POST:
+					httpRequest = HttpRequest.newBuilder()
+							.uri(new URI(controllerInfo.getControllerHost() + uri))
+							.header("Authorization", getBearerToken())
+							.header("Content-Type", "application/json")
+							.header("Accept", "application/json, text/plain, */*")
+							.POST(HttpRequest.BodyPublishers.ofString(payload))
+							.build();
+					break;
+				case Constants.HTTP_METHOD_GET:
+					httpRequest = HttpRequest.newBuilder()
+							.uri(new URI(controllerInfo.getControllerHost() + uri))
+							.header("Authorization", getBearerToken())
+							.header("Content-Type", "application/json")
+							.header("Accept", "application/json, text/plain, */*")
+							.build();
+					break;
+				case Constants.HTTP_METHOD_DELETE:
+					httpRequest = HttpRequest.newBuilder()
+							.uri(new URI(controllerInfo.getControllerHost() + uri))
+							.header("Authorization", getBearerToken())
+							.header("Content-Type", "application/json")
+							.header("Accept", "application/json, text/plain, */*")
+							.DELETE()
+							.build();
+					break;
+
+				default:
+					logger.debug("{} Request type GET", Common.getLogHeader(this, "getRequest"));
+					break;
 			}
 		}
 
@@ -94,6 +110,7 @@ public class ControllerService {
 		logger.debug("{} Response Status Body: [{}]", Common.getLogHeader(this, "getRequest"), httpResponse.body());
 
 		return httpResponse;
+
 	}
 
 	protected String getBearerToken() {
@@ -113,7 +130,8 @@ public class ControllerService {
 				"{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
 				System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
 
-		HttpResponse<String> httpResponse = getRequest("/controller/sim/v2/user/machines/keys", payload);
+		HttpResponse<String> httpResponse = getRequest("/controller/sim/v2/user/machines/keys",
+				Constants.HTTP_METHOD_POST, payload);
 		String serverReponseClean = httpResponse.body().replace("],\"simEnabledMachineExists\":true}", "")
 				.replace("{\"machineKeys\":[", "");
 		serverReponseClean = "[" + serverReponseClean.replace("}{", "},{") + "]";
@@ -144,7 +162,8 @@ public class ControllerService {
 		logger.debug("{} Tags [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
 
 		if (jsonAPI != null && !jsonAPI.equals("")) {
-			HttpResponse<String> httpResponse = getRequest("/controller/restui/tags/tagEntitiesInBatch", jsonAPI);
+			HttpResponse<String> httpResponse = getRequest("/controller/restui/tags/tagEntitiesInBatch",
+					Constants.HTTP_METHOD_POST, jsonAPI);
 			logger.debug("{} Status Code [{}] and Body [{}]",
 					Common.getLogHeader(this, "publishTags"),
 					httpResponse.statusCode(),
@@ -152,7 +171,13 @@ public class ControllerService {
 		} else {
 			logger.warn("{} Not published, JSON is empty", Common.getLogHeader(this, "publishTags"));
 		}
+	}
 
+	public void deleteTags(int entityID, EntityType entityType) throws Exception {
+		getRequest(
+				String.format("/controller/restui/tags/allTagsOnEntity?entityId=%s&entityType=%s",
+						entityID, entityType.convertToAPIEntityType()),
+				Constants.HTTP_METHOD_DELETE, "");
 	}
 
 	public boolean findAPMCorrelation(Server server) throws Exception {
@@ -162,7 +187,8 @@ public class ControllerService {
 				server.getServerName());
 
 		HttpResponse<String> httpResponse = getRequest(
-				String.format("/controller/sim/v2/user/machines/%s/apmCorrelation", server.getMachineId()), "");
+				String.format("/controller/sim/v2/user/machines/%s/apmCorrelation", server.getMachineId()),
+				Constants.HTTP_METHOD_GET, "");
 
 		APMCorrelation[] listApmCorrelation = new ObjectMapper().readValue(httpResponse.body(), APMCorrelation[].class);
 		server.setApmCorrelation(listApmCorrelation);

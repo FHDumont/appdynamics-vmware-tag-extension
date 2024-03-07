@@ -6,10 +6,12 @@ import com.vmware.vim25.mo.HostSystem;
 public class HostStats {
 
 	private int cpuCores;
-	private String overallCpuUsage;
-	private String overallCpuUsagePerc;
-	private String memorySize;
-	private String overallMemoryUsage;
+	private int overallCpuUsage;
+	private int overallCpuUsagePerc;
+	private int memorySize;
+	private int overallMemoryUsage;
+	private int overallMemoryPerc;
+
 	private int totalVirtualMachine;
 
 	public HostStats(HostSystem hostSystem, int totalVirtualMachine) {
@@ -19,15 +21,14 @@ public class HostStats {
 		long totalHz = hostSystem.getHardware().getCpuInfo().getHz();
 		this.cpuCores = hostSystem.getHardware().getCpuInfo().getNumCpuCores();
 
-		this.overallCpuUsage = String.valueOf(hostStats.getOverallCpuUsage()) + " MHz";
+		this.overallCpuUsage = hostStats.getOverallCpuUsage();
 
 		double totalCapacityMHz = totalHz * this.cpuCores * 0.000001;
-		double cpuUsagePercent = hostStats.getOverallCpuUsage() * 100 / totalCapacityMHz;
-		this.overallCpuUsagePerc = String.valueOf(Math.round(cpuUsagePercent)) + " %";
+		this.overallCpuUsagePerc = (int) Math.round(hostStats.getOverallCpuUsage() * 100 / totalCapacityMHz);
 
-		this.memorySize = (hostSystem.getHardware().getMemorySize() / (1024 * 1024 * 1024)) + " GB";
-
-		this.overallMemoryUsage = hostStats.getOverallMemoryUsage() / 1024 + " GB";
+		this.memorySize = (int) (hostSystem.getHardware().getMemorySize() / (1024 * 1024 * 1024));
+		this.overallMemoryUsage = hostStats.getOverallMemoryUsage() / 1024;
+		this.overallMemoryPerc = Math.round(this.overallMemoryUsage * 100 / this.memorySize);
 
 		this.totalVirtualMachine = totalVirtualMachine;
 
@@ -41,36 +42,44 @@ public class HostStats {
 		this.cpuCores = cpuCores;
 	}
 
-	public String getOverallCpuUsage() {
+	public int getOverallCpuUsage() {
 		return overallCpuUsage;
 	}
 
-	public void setOverallCpuUsage(String overallCpuUsage) {
+	public void setOverallCpuUsage(int overallCpuUsage) {
 		this.overallCpuUsage = overallCpuUsage;
 	}
 
-	public String getOverallCpuUsagePerc() {
+	public int getOverallCpuUsagePerc() {
 		return overallCpuUsagePerc;
 	}
 
-	public void setOverallCpuUsagePerc(String overallCpuUsagePerc) {
+	public void setOverallCpuUsagePerc(int overallCpuUsagePerc) {
 		this.overallCpuUsagePerc = overallCpuUsagePerc;
 	}
 
-	public String getMemorySize() {
+	public int getMemorySize() {
 		return memorySize;
 	}
 
-	public void setMemorySize(String memorySize) {
+	public void setMemorySize(int memorySize) {
 		this.memorySize = memorySize;
 	}
 
-	public String getOverallMemoryUsage() {
+	public int getOverallMemoryUsage() {
 		return overallMemoryUsage;
 	}
 
-	public void setOverallMemoryUsage(String overallMemoryUsage) {
+	public void setOverallMemoryUsage(int overallMemoryUsage) {
 		this.overallMemoryUsage = overallMemoryUsage;
+	}
+
+	public int getOverallMemoryPerc() {
+		return overallMemoryPerc;
+	}
+
+	public void setOverallMemoryPerc(int overallMemoryPerc) {
+		this.overallMemoryPerc = overallMemoryPerc;
 	}
 
 	public int getTotalVirtualMachine() {

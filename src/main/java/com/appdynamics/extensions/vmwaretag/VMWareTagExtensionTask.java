@@ -3,7 +3,6 @@ package com.appdynamics.extensions.vmwaretag;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +33,10 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	private MonitorContextConfiguration monitorContextConfig;
 	protected MetricWriteHelper metricWriteHelper;
 
+	private Map<String, VMWareService> listVMWareService;
+	private Map<String, ControllerService> listControllerService;
+	private Boolean isRunning;
+
 	public VMWareTagExtensionTask(
 			TasksExecutionServiceProvider tasksExecutionServiceProvider,
 			MonitorContextConfiguration contextConfiguration) {
@@ -47,6 +50,8 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	@Override
 	public void run() {
 		while (true) {
+			this.isRunning = true;
+			Map<String, Object> yamlConfig = new HashMap<>();
 			Instant startTime = Instant.now();
 
 			try {
@@ -54,7 +59,6 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 
 				threads = new ArrayList<>();
 
-				Map<String, Object> yamlConfig;
 				// TEMPORARY, FOR DEBUGGING
 				// READ CONFIGURATION FILE, SIMULATING THE PLUGIN
 				// Yaml yaml = new Yaml();
@@ -75,7 +79,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 						yamlConfig.get(Constants.CONTROLLERS),
 						ControllerInfo[].class);
 
-				Map<String, ControllerService> listControllerService = new HashMap<>();
+				listControllerService = new HashMap<>();
 				for (ControllerInfo ci : listControllerInfo) {
 					listControllerService.put(ci.getControllerHost(), new ControllerService(ci));
 				}
@@ -85,7 +89,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 						yamlConfig.get(Constants.VMWARE_SERVERS),
 						VMWareConfig[].class);
 
-				Map<String, VMWareService> listVMWareService = new HashMap<>();
+				this.listVMWareService = new HashMap<>();
 				for (VMWareConfig vc : listVMWareConfig) {
 					listVMWareService.put(vc.getHost(), new VMWareService(vc));
 				}
@@ -149,9 +153,10 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 			try {
 				Duration duration = Duration.between(startTime, Instant.now());
 				logger.info("{} Execution time {}s, waiting next round {}ms", Common.getLogHeader(this, "run"),
-						duration.getSeconds(), this.monitorContextConfig.getConfigYml().get(Constants.FREQUENCY));
+						duration.getSeconds(), yamlConfig.get(Constants.FREQUENCY));
+				this.isRunning = false;
 				Thread.sleep(
-						Integer.valueOf(this.monitorContextConfig.getConfigYml().get(Constants.FREQUENCY).toString()));
+						Integer.valueOf(yamlConfig.get(Constants.FREQUENCY).toString()));
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -161,6 +166,18 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	@Override
 	public void onTaskComplete() {
 		logger.info("{} TASK Completed", Common.getLogHeader(this, "run"));
+	}
+
+	public Map<String, VMWareService> getListVMWareService() {
+		return listVMWareService;
+	}
+
+	public Map<String, ControllerService> getListControllerService() {
+		return listControllerService;
+	}
+
+	public Boolean isRunning() {
+		return this.isRunning;
 	}
 
 }
