@@ -175,11 +175,15 @@ public class MatchThread extends Thread {
 						listEntities.add(tagEntity);
 
 						if (apmCorrelation.getAppId() > 0) {
-							this.listApplicationWithMigration.put(apmCorrelation.getAppId(), server.isHadMigration());
+							Boolean hadMigration = this.listApplicationWithMigration.get(apmCorrelation.getAppId());
+							this.listApplicationWithMigration.put(apmCorrelation.getAppId(),
+									hadMigration != null && hadMigration ? true : server.isHadMigration());
 						}
 
 						if (apmCorrelation.getTierId() > 0) {
-							this.listTierWithEvent.put(apmCorrelation.getTierId(), server.isHadMigration());
+							Boolean hadMigration = this.listTierWithEvent.get(apmCorrelation.getTierId());
+							this.listTierWithEvent.put(apmCorrelation.getTierId(),
+									hadMigration != null && hadMigration ? true : server.isHadMigration());
 						}
 					}
 
