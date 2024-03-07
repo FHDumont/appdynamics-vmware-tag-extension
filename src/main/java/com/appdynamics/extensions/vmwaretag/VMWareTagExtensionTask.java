@@ -14,7 +14,9 @@ import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
+import com.appdynamics.extensions.metrics.Metric;
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
+import com.appdynamics.extensions.vmwaretag.model.Server;
 import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.services.ControllerService;
 import com.appdynamics.extensions.vmwaretag.services.VMWareService;
@@ -36,6 +38,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	private Map<String, VMWareService> listVMWareService;
 	private Map<String, ControllerService> listControllerService;
 	private Boolean isRunning;
+	private Map<String, Object> yamlConfig;
 
 	public VMWareTagExtensionTask(
 			TasksExecutionServiceProvider tasksExecutionServiceProvider,
@@ -51,7 +54,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 	public void run() {
 		while (true) {
 			this.isRunning = true;
-			Map<String, Object> yamlConfig = new HashMap<>();
+			yamlConfig = new HashMap<>();
 			Instant startTime = Instant.now();
 
 			try {
@@ -63,7 +66,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 				// READ CONFIGURATION FILE, SIMULATING THE PLUGIN
 				// Yaml yaml = new Yaml();
 				// InputStream inputStream = new FileInputStream(
-				// "/Users/fdumont/Developer/GitHub/appdynamics-vsphere-tag-extension/src/main/resources/conf/config.yml");
+				// "/Users/fdumont/Developer/GitHub/appdynamics-vmware-tag-extension/src/main/resources/conf/config.yml");
 				// yamlConfig = yaml.load(inputStream);
 
 				yamlConfig = (Map<String, Object>) monitorContextConfig.getConfigYml();
@@ -146,6 +149,64 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 				threads = new ArrayList<>();
 				logger.info("{} Data match threads finished!", Common.getLogHeader(this, "run"));
 
+				// THE MATCH WILL IDENTIFY ONLY THE HOSTS THAT HAVE VMs ON THE CONTROLLER'S
+				// SERVERS, PUBLISH METRICS ONLY FOR THESE FOUND HOSTS
+				if (metricWriteHelper != null) {
+					logger.info("{} Getting metrics values...", Common.getLogHeader(this, "run"));
+					List<Metric> collectedMetrics = new ArrayList<>();
+					listControllerService.forEach((host, controlerService) -> {
+						for (Server server : controlerService.listServerTagged) {
+							try {
+								String baseMetricName = String.valueOf(yamlConfig.get(Constants.METRIC_PREFIX)) +
+										"|" + server.getDatacenterName() +
+										"|" + server.getClusterName() +
+										"|" + server.getHostName();
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"HeartBeat",
+										"1"));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Overall CPU Usage",
+										String.valueOf(server.getHostStats().getOverallCpuUsage())));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Overall CPU Usage %",
+										String.valueOf(server.getHostStats().getOverallCpuUsagePerc())));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Memory Size",
+										String.valueOf(server.getHostStats().getMemorySize())));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Overall Memory Usage",
+										String.valueOf(server.getHostStats().getOverallMemoryUsage())));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Overall Memory Usage %",
+										String.valueOf(server.getHostStats().getOverallMemoryPerc())));
+
+								collectedMetrics.add(createMetric(baseMetricName,
+										"Total Virtual Machines",
+										String.valueOf(server.getHostStats().getTotalVirtualMachine())));
+
+							} catch (Exception e) {
+								logger.error("{} {}...",
+										Common.getLogHeader(this, "run"),
+										e.getMessage(), e);
+							}
+						}
+					});
+
+					logger.info("{} Publish metrics [{}]...",
+							Common.getLogHeader(this, "run"),
+							collectedMetrics.size());
+
+					if (collectedMetrics.size() > 0) {
+						metricWriteHelper.transformAndPrintMetrics(collectedMetrics);
+					}
+				}
+
 			} catch (Exception e) {
 				logger.error("{} Exception on running task {}", Common.getLogHeader(this, "run"), e.getMessage(), e);
 			}
@@ -178,6 +239,10 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 
 	public Boolean isRunning() {
 		return this.isRunning;
+	}
+
+	protected Metric createMetric(String baseMetricName, String metricName, String metricValue) throws Exception {
+		return new Metric(metricName, metricValue, baseMetricName);
 	}
 
 }

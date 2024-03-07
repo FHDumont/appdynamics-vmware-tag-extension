@@ -11,6 +11,7 @@ import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.model.VMWareInfo;
 import com.appdynamics.extensions.vmwaretag.util.Common;
 import com.vmware.vim25.Event;
+import com.vmware.vim25.mo.HostSystem;
 import com.vmware.vim25.mo.ServiceInstance;
 
 public class VMWareService {
@@ -21,6 +22,8 @@ public class VMWareService {
 	private ServiceInstance serviceInstance;
 	public Map<String, VMWareInfo> listVMWareInfo;
 	public Map<String, Event> listEvents;
+	public Map<String, HostSystem> listHostSystem;
+	public Boolean isConnected;
 
 	public VMWareService(VMWareConfig vmwareConfig) throws Exception {
 		this.vmwareConfig = vmwareConfig;
@@ -28,7 +31,7 @@ public class VMWareService {
 				Common.getLogHeader(this, "constructor"),
 				vmwareConfig.getDisplayName(),
 				vmwareConfig.getHost());
-
+		this.isConnected = false;
 		connect();
 	}
 
@@ -44,6 +47,8 @@ public class VMWareService {
 					30000, 0);
 
 			this.serviceInstance = serviceInstance;
+
+			this.isConnected = true;
 		} catch (Exception e) {
 			logger.error("{} Unable to connect to the host [{}]", Common.getLogHeader(this, "connect"),
 					vmwareConfig.getHost(), e);

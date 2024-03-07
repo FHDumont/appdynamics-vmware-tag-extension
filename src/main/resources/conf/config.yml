@@ -17,6 +17,8 @@ controllers:
     clientSecret: "1895e99f-aa84-26cf-65d0-319403a1b4be"
 
 numberOfThreads: 30
-metricPrefix: ""
+metricPrefix: "Custom Metrics|VMWareTag"
 encryptionKey: ""
 frequency: 120000
+formatDate: dd/MM/yyyy HH:mm:ss
+publishMetrics: false

@@ -48,7 +48,7 @@ public class MatchThread extends Thread {
 				logger.info("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
 						vmwareService.getVmwareConfig().getDisplayName(), vmwareService.getVmwareConfig().getHost());
 				Map<String, VMWareInfo> listVMs = vmwareService.getVMs();
-				List<Server> listServerTagged = new ArrayList<>();
+				this.controllerService.listServerTagged = new ArrayList<>();
 				Map<String, Event> listEvents = vmwareService.getEvents();
 
 				this.controllerService.listServers.forEach((serverName, serverObject) -> {
@@ -75,7 +75,7 @@ public class MatchThread extends Thread {
 								vmServerTagged.setMigrationMessage(event.getFullFormattedMessage());
 							}
 
-							listServerTagged.add(vmServerTagged);
+							this.controllerService.listServerTagged.add(vmServerTagged);
 						} catch (CloneNotSupportedException e) {
 							e.printStackTrace();
 						}
@@ -83,14 +83,15 @@ public class MatchThread extends Thread {
 					}
 				});
 
-				logger.info("{} Total Server Tagged {} ", Common.getLogHeader(this, "run"), listServerTagged.size());
+				logger.info("{} Total Server Tagged {} ", Common.getLogHeader(this, "run"),
+						this.controllerService.listServerTagged.size());
 
 				listApplicationWithMigration = new HashMap<>();
 				listTierWithEvent = new HashMap<>();
 				List<Server> listServerToPublish = new ArrayList<>();
 
-				for (int idx = 0; idx < listServerTagged.size(); idx++) {
-					Server server = listServerTagged.get(idx);
+				for (int idx = 0; idx < this.controllerService.listServerTagged.size(); idx++) {
+					Server server = this.controllerService.listServerTagged.get(idx);
 
 					logger.debug("{} Server Tagged {} ", server.toString(), Common.getLogHeader(this, "run"));
 
