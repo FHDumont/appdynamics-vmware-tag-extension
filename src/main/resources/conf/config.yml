@@ -3,10 +3,6 @@ servers:
     host: "10.0.0.1"
     username: "admin"
     password: "password"
-  - displayName: "vSphere Test"
-    host: "10.0.0.2"
-    username: "admin"
-    password: "password"
 
 controllers:
   - displayName: "Controller Production"
@@ -15,9 +11,9 @@ controllers:
     controllerSslEnabled: true
     clientId: "abc@def"
     clientSecret: "1895e99f-aa84-26cf-65d0-319403a1b4be"
-    proxyHost: server.proxy.com
-    proxyPort: 8090
-    proxySsl: false
+    proxyHost:
+    proxyPort:
+    proxySsl:
 
 numberOfThreads: 30
 metricPrefix: "Custom Metrics|VMWareTag"

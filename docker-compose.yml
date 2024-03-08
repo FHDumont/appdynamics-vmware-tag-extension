@@ -1,0 +1,15 @@
+version: "3.7"
+
+services:
+  ########################################################
+  ### SQUID TO TEST PROXY
+  ########################################################
+
+  squid:
+    image: ubuntu/squid:latest
+    container_name: squid
+    restart: on-failure
+    expose:
+      - 3128
+    ports:
+      - 3128:3128

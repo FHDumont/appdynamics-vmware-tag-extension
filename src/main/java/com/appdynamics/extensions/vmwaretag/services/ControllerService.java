@@ -1,10 +1,7 @@
 package com.appdynamics.extensions.vmwaretag.services;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.net.ProxySelector;
-import java.net.SocketAddress;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -56,25 +53,14 @@ public class ControllerService {
 					this.controllerInfo.getProxyPort(),
 					this.controllerInfo.getProxySsl());
 
-			Proxy proxy = new Proxy(Proxy.Type.HTTP,
-					new InetSocketAddress(this.controllerInfo.getProxyHost(),
-							this.controllerInfo.getProxyPort()));
+			InetSocketAddress proxyAddress = new InetSocketAddress(this.controllerInfo.getProxyHost(),
+					this.controllerInfo.getProxyPort());
+			ProxySelector proxySelector = ProxySelector.of(proxyAddress);
+			this.client = HttpClient.newBuilder().proxy(proxySelector).build();
 
-			ProxySelector.setDefault(new ProxySelector() {
-				@Override
-				public List<Proxy> select(URI uri) {
-					return List.of(proxy);
-				}
-
-				@Override
-				public void connectFailed(URI uri, SocketAddress sa, IOException ioe) {
-					if (uri == null || sa == null || ioe == null) {
-						throw new IllegalArgumentException("Argumentos não podem ser nulos.");
-					}
-				}
-			});
+		} else {
+			this.client = HttpClient.newBuilder().build();
 		}
-		this.client = HttpClient.newHttpClient();
 
 		String payload = String.format(
 				"grant_type=client_credentials&client_id=%s&client_secret=%s",
