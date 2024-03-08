@@ -2,6 +2,8 @@ package com.appdynamics.extensions.vmwaretag.model;
 
 public class TagKeys {
 
+	private int id;
+
 	private String key;
 	private String value;
 
@@ -21,4 +23,11 @@ public class TagKeys {
 		this.value = value;
 	}
 
+	public int getId() {
+		return id;
+	}
+
+	public void setId(int id) {
+		this.id = id;
+	}
 }

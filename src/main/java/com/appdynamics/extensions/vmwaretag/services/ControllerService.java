@@ -18,6 +18,7 @@ import com.appdynamics.extensions.vmwaretag.model.APMCorrelation;
 import com.appdynamics.extensions.vmwaretag.model.AccessToken;
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
 import com.appdynamics.extensions.vmwaretag.model.Server;
+import com.appdynamics.extensions.vmwaretag.model.TagKeys;
 import com.appdynamics.extensions.vmwaretag.util.Common;
 import com.appdynamics.extensions.vmwaretag.util.Constants;
 import com.appdynamics.extensions.vmwaretag.util.EntityType;
@@ -69,8 +70,7 @@ public class ControllerService {
 
 		HttpResponse<String> httpResponse = getRequest("/controller/api/oauth/access_token",
 				Constants.HTTP_METHOD_POST, payload);
-		this.accessToken = new ObjectMapper().readValue(httpResponse.body(),
-				AccessToken.class);
+		this.accessToken = new ObjectMapper().readValue(httpResponse.body(), AccessToken.class);
 
 		this.listServers = new ConcurrentHashMap<>();
 	}
@@ -201,6 +201,22 @@ public class ControllerService {
 				String.format("/controller/restui/tags/allTagsOnEntity?entityId=%s&entityType=%s",
 						entityID, entityType.convertToAPIEntityType()),
 				Constants.HTTP_METHOD_DELETE, "");
+	}
+
+	public void deleteTag(int tagId, int entityID, EntityType entityType) throws Exception {
+		getRequest(
+				String.format("/controller/restui/tags/tagOnEntity?tagId=%s&entityId=%s&entityType=%s",
+						tagId, entityID, entityType.convertToAPIEntityType()),
+				Constants.HTTP_METHOD_DELETE, "");
+	}
+
+	public TagKeys[] getTags(int entityID, EntityType entityType) throws Exception {
+		HttpResponse<String> httpResponse = getRequest(
+				String.format("/controller/restui/tags?entityId=%s&entityType=%s",
+						entityID,
+						entityType.convertToAPIEntityType()),
+				Constants.HTTP_METHOD_GET, "");
+		return new ObjectMapper().readValue(httpResponse.body(), TagKeys[].class);
 	}
 
 	public boolean findAPMCorrelation(Server server) throws Exception {

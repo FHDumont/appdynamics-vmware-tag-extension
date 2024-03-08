@@ -222,10 +222,10 @@ public class PublishTagsThread extends Thread {
 		// tagKey.setValue(server.getVmName());
 		// listKeys.add(tagKey);
 
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX VMWare MOR");
-		tagKey.setValue(server.getVmMOR());
-		listKeys.add(tagKey);
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX VMWare MOR");
+		// tagKey.setValue(server.getVmMOR());
+		// listKeys.add(tagKey);
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Had Migration Last 24h");
