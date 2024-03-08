@@ -34,14 +34,20 @@ public class MatchThread extends Thread {
 
 	private Map<Integer, Boolean> listApplicationWithMigration;
 	private Map<Integer, Boolean> listTierWithEvent;
+	private String formatDate;
 
-	public MatchThread(ControllerService controllerService, List<VMWareService> listVMWareService) {
+	public MatchThread(ControllerService controllerService, List<VMWareService> listVMWareService, String formatDate) {
 		this.controllerService = controllerService;
 		this.listVMWareService = listVMWareService;
+		this.formatDate = formatDate;
+		if (formatDate == null || formatDate.equals("")) {
+			formatDate = "dd/MM/yyyy HH:mm:ss";
+		}
+
 	}
 
 	public void run() {
-		logger.info("{} Starting matching", Common.getLogHeader(this, "run"));
+		logger.info("{} Starting matching, formatDate [{}]", Common.getLogHeader(this, "run"), this.formatDate);
 		for (VMWareService vmwareService : listVMWareService) {
 			try {
 
@@ -232,10 +238,7 @@ public class MatchThread extends Thread {
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Last Update");
-		tagKey.setValue(
-				String.valueOf(
-						LocalDateTime.now()
-								.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))));
+		tagKey.setValue(String.valueOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern(this.formatDate))));
 		listKeys.add(tagKey);
 
 		return listKeys;
@@ -324,10 +327,7 @@ public class MatchThread extends Thread {
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Last Update");
-		tagKey.setValue(
-				String.valueOf(
-						LocalDateTime.now()
-								.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))));
+		tagKey.setValue(String.valueOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern(this.formatDate))));
 		listKeys.add(tagKey);
 
 		return listKeys;

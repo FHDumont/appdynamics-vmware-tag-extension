@@ -136,7 +136,8 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 				threads = new ArrayList<>();
 				logger.info("{} Starting match threads...", Common.getLogHeader(this, "run"));
 				listControllerService.forEach((host, controlerService) -> {
-					Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()));
+					Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()),
+							String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)));
 					matchThread.setName(host);
 					matchThread.start();
 					threads.add(matchThread);
@@ -152,52 +153,55 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 				// THE MATCH WILL IDENTIFY ONLY THE HOSTS THAT HAVE VMs ON THE CONTROLLER'S
 				// SERVERS, PUBLISH METRICS ONLY FOR THESE FOUND HOSTS
 				this.totalMetricsPublished = 0;
-				if (metricWriteHelper != null) {
-					logger.info("{} Publish metrics values...", Common.getLogHeader(this, "run"));
-					listControllerService.forEach((host, controlerService) -> {
-						for (Server server : controlerService.listServerTagged) {
-							try {
-								String baseMetricName = String.valueOf(yamlConfig.get(Constants.METRIC_PREFIX)) +
-										"|" + server.getDatacenterName() +
-										"|" + server.getClusterName() +
-										"|" + server.getHostName();
+				if (yamlConfig.get(Constants.PUBLISH_METRICS) != null
+						&& (boolean) yamlConfig.get(Constants.PUBLISH_METRICS)) {
+					if (metricWriteHelper != null) {
+						logger.info("{} Publish metrics values...", Common.getLogHeader(this, "run"));
+						listControllerService.forEach((host, controlerService) -> {
+							for (Server server : controlerService.listServerTagged) {
+								try {
+									String baseMetricName = String.valueOf(yamlConfig.get(Constants.METRIC_PREFIX)) +
+											"|" + server.getDatacenterName() +
+											"|" + server.getClusterName() +
+											"|" + server.getHostName();
 
-								publicMetric(baseMetricName,
-										"HeartBeat",
-										"1");
+									publicMetric(baseMetricName,
+											"HeartBeat",
+											"1");
 
-								publicMetric(baseMetricName,
-										"Overall CPU Usage",
-										String.valueOf(server.getHostStats().getOverallCpuUsage()));
+									publicMetric(baseMetricName,
+											"Overall CPU Usage",
+											String.valueOf(server.getHostStats().getOverallCpuUsage()));
 
-								publicMetric(baseMetricName,
-										"Overall CPU Usage %",
-										String.valueOf(server.getHostStats().getOverallCpuUsagePerc()));
+									publicMetric(baseMetricName,
+											"Overall CPU Usage %",
+											String.valueOf(server.getHostStats().getOverallCpuUsagePerc()));
 
-								publicMetric(baseMetricName,
-										"Memory Size",
-										String.valueOf(server.getHostStats().getMemorySize()));
+									publicMetric(baseMetricName,
+											"Memory Size",
+											String.valueOf(server.getHostStats().getMemorySize()));
 
-								publicMetric(baseMetricName,
-										"Overall Memory Usage",
-										String.valueOf(server.getHostStats().getOverallMemoryUsage()));
+									publicMetric(baseMetricName,
+											"Overall Memory Usage",
+											String.valueOf(server.getHostStats().getOverallMemoryUsage()));
 
-								publicMetric(baseMetricName,
-										"Overall Memory Usage %",
-										String.valueOf(server.getHostStats().getOverallMemoryPerc()));
+									publicMetric(baseMetricName,
+											"Overall Memory Usage %",
+											String.valueOf(server.getHostStats().getOverallMemoryPerc()));
 
-								publicMetric(baseMetricName,
-										"Total Virtual Machines",
-										String.valueOf(server.getHostStats().getTotalVirtualMachine()));
+									publicMetric(baseMetricName,
+											"Total Virtual Machines",
+											String.valueOf(server.getHostStats().getTotalVirtualMachine()));
 
-							} catch (Exception e) {
-								logger.error("{} {}...",
-										Common.getLogHeader(this, "run"),
-										e.getMessage(), e);
+								} catch (Exception e) {
+									logger.error("{} {}...",
+											Common.getLogHeader(this, "run"),
+											e.getMessage(), e);
+								}
 							}
-						}
-					});
+						});
 
+					}
 				}
 
 				logger.info("{} Total metrics published [{}]", Common.getLogHeader(this, "run"),
