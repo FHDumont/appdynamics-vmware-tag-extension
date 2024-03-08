@@ -16,18 +16,26 @@ public class ServerThread extends Thread {
 		this.controllerService = controllerService;
 	}
 
+	private int totalServers;
+
 	public void run() {
-		logger.info("{} Searching servers (machine agents)...", Common.getLogHeader(this, "run"));
+		logger.debug("{} Searching servers (machine agents)...", Common.getLogHeader(this, "run"));
 
 		try {
 			controllerService.refreshServers();
-			logger.info("{} Found {} servers (machine agent)",
+			logger.debug("{} Found {} servers (machine agent)",
 					Common.getLogHeader(this, "run"),
 					this.controllerService.listServers.size());
+
+			this.totalServers = this.controllerService.listServers.size();
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
+	}
+
+	public int getTotalServers() {
+		return this.totalServers;
 	}
 
 }

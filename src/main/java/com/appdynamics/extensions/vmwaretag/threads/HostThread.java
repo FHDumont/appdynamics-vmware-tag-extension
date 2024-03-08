@@ -28,7 +28,7 @@ public class HostThread extends Thread {
 	}
 
 	public void run() {
-		logger.info("{} Searching vms for host [{}]...", Common.getLogHeader(this, "run"), this.hostSystem.getName());
+		logger.debug("{} Searching vms for host [{}]...", Common.getLogHeader(this, "run"), this.hostSystem.getName());
 		this.listVMWareInfo = new HashMap<>();
 		try {
 			VirtualMachine[] vmList = this.hostSystem.getVms();
@@ -40,7 +40,7 @@ public class HostThread extends Thread {
 				VMWareInfo vmInfo = new VMWareInfo(vm, this.dataCenter, this.cluster, this.hostSystem, hostStats);
 				this.listVMWareInfo.put(vm.getName().toLowerCase(), vmInfo);
 			}
-			logger.info("{} Total VMs found [{}] for this host [{}]",
+			logger.debug("{} Total VMs found [{}] for this host [{}]",
 					Common.getLogHeader(this, "run"),
 					this.listVMWareInfo.size(),
 					this.hostSystem.getName());

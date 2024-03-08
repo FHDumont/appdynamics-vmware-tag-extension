@@ -12,6 +12,7 @@ import org.slf4j.Logger;
 import com.appdynamics.extensions.AMonitorTaskRunnable;
 import com.appdynamics.extensions.MetricWriteHelper;
 import com.appdynamics.extensions.TasksExecutionServiceProvider;
+import com.appdynamics.extensions.alerts.customevents.Event;
 import com.appdynamics.extensions.conf.MonitorContextConfiguration;
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
@@ -22,6 +23,7 @@ import com.appdynamics.extensions.vmwaretag.services.VMWareService;
 import com.appdynamics.extensions.vmwaretag.threads.DataCenterThread;
 import com.appdynamics.extensions.vmwaretag.threads.EventsThread;
 import com.appdynamics.extensions.vmwaretag.threads.MatchThread;
+import com.appdynamics.extensions.vmwaretag.threads.PublishTagsThread;
 import com.appdynamics.extensions.vmwaretag.threads.ServerThread;
 import com.appdynamics.extensions.vmwaretag.util.Common;
 import com.appdynamics.extensions.vmwaretag.util.Constants;
@@ -119,12 +121,12 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 					threads.add(eventsThread);
 				});
 
-				logger.info("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
+				logger.debug("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.start();
 				}
 
-				logger.info("{} Waiting for data capture threads to finish...",
+				logger.info("{} ==> Waiting for data capture threads to finish...",
 						Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.join();
@@ -132,31 +134,79 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 
 				logger.info("{} Data capture threads finished!", Common.getLogHeader(this, "run"));
 
+				int totalDataCenter = 0;
+				int totalCluster = 0;
+				int totalHost = 0;
+				int totalVMs = 0;
+				int totalEvents = 0;
+				int totalServers = 0;
+				for (Thread thread : threads) {
+					if (thread instanceof DataCenterThread) {
+						totalDataCenter += ((DataCenterThread) thread).getTotalDataCenter();
+						totalCluster += ((DataCenterThread) thread).getTotalCluster();
+						totalHost += ((DataCenterThread) thread).getTotalHost();
+						totalVMs += ((DataCenterThread) thread).getTotalVMs();
+					} else if (thread instanceof EventsThread) {
+						totalEvents += ((EventsThread) thread).getTotalEvents();
+					} else if (thread instanceof ServerThread) {
+						totalServers += ((ServerThread) thread).getTotalServers();
+					}
+				}
+				logger.info(
+						"{} Total objects found: Datacenter [{}], Cluster [{}], Host [{}], VM [{}] Events [{}] Servers [{}]",
+						Common.getLogHeader(this, "run"),
+						totalDataCenter, totalCluster, totalHost, totalVMs, totalEvents, totalServers);
+
 				// MATCHING MACHINE AGENTS WITH VIRTUAL MACHINES
 				threads = new ArrayList<>();
-				logger.info("{} Starting match threads...", Common.getLogHeader(this, "run"));
+				logger.debug("{} Starting match threads...", Common.getLogHeader(this, "run"));
 				listControllerService.forEach((host, controlerService) -> {
-					Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()),
-							String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)));
+					Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()));
 					matchThread.setName(host);
 					matchThread.start();
 					threads.add(matchThread);
 				});
 
-				logger.info("{} Waiting for data match threads to finish...", Common.getLogHeader(this, "run"));
+				logger.info("{} ==> Waiting for data match threads to finish...", Common.getLogHeader(this, "run"));
 				for (Thread thread : threads) {
 					thread.join();
 				}
-				threads = new ArrayList<>();
 				logger.info("{} Data match threads finished!", Common.getLogHeader(this, "run"));
 
+				int totalServerTagged = 0;
+				for (Thread thread : threads) {
+					if (thread instanceof MatchThread) {
+						totalServerTagged += ((MatchThread) thread).getTotalServerTagged();
+					}
+				}
+				logger.info("{} Total servers to create tags (matched) [{}]",
+						Common.getLogHeader(this, "run"), totalServerTagged);
+
+				// PUBLISHING TAGS
+				threads = new ArrayList<>();
+				logger.debug("{} Starting publish tags threads...", Common.getLogHeader(this, "run"));
+				listControllerService.forEach((host, controlerService) -> {
+					Thread publishThread = new PublishTagsThread(controlerService,
+							String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)));
+					publishThread.setName(host);
+					publishThread.start();
+					threads.add(publishThread);
+				});
+
+				logger.info("{} ==> Waiting for publish tag threads to finish...", Common.getLogHeader(this, "run"));
+				for (Thread thread : threads) {
+					thread.join();
+				}
+				logger.info("{} Publish tags threads finished!", Common.getLogHeader(this, "run"));
+
+				threads = new ArrayList<>();
 				// THE MATCH WILL IDENTIFY ONLY THE HOSTS THAT HAVE VMs ON THE CONTROLLER'S
 				// SERVERS, PUBLISH METRICS ONLY FOR THESE FOUND HOSTS
 				this.totalMetricsPublished = 0;
 				if (yamlConfig.get(Constants.PUBLISH_METRICS) != null
 						&& (boolean) yamlConfig.get(Constants.PUBLISH_METRICS)) {
 					if (metricWriteHelper != null) {
-						logger.info("{} Publish metrics values...", Common.getLogHeader(this, "run"));
+						logger.info("{} ==> Publishing metrics values...", Common.getLogHeader(this, "run"));
 						listControllerService.forEach((host, controlerService) -> {
 							for (Server server : controlerService.listServerTagged) {
 								try {
@@ -169,21 +219,21 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 											"HeartBeat",
 											"1");
 
-									publicMetric(baseMetricName,
-											"Overall CPU Usage",
-											String.valueOf(server.getHostStats().getOverallCpuUsage()));
+									// publicMetric(baseMetricName,
+									// "Overall CPU Usage",
+									// String.valueOf(server.getHostStats().getOverallCpuUsage()));
 
 									publicMetric(baseMetricName,
 											"Overall CPU Usage %",
 											String.valueOf(server.getHostStats().getOverallCpuUsagePerc()));
 
-									publicMetric(baseMetricName,
-											"Memory Size",
-											String.valueOf(server.getHostStats().getMemorySize()));
+									// publicMetric(baseMetricName,
+									// "Memory Size",
+									// String.valueOf(server.getHostStats().getMemorySize()));
 
-									publicMetric(baseMetricName,
-											"Overall Memory Usage",
-											String.valueOf(server.getHostStats().getOverallMemoryUsage()));
+									// publicMetric(baseMetricName,
+									// "Overall Memory Usage",
+									// String.valueOf(server.getHostStats().getOverallMemoryUsage()));
 
 									publicMetric(baseMetricName,
 											"Overall Memory Usage %",

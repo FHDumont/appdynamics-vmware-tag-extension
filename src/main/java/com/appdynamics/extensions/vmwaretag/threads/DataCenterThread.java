@@ -21,14 +21,19 @@ public class DataCenterThread extends Thread {
 	public static final Logger logger = ExtensionsLoggerFactory.getLogger(DataCenterThread.class);
 
 	private VMWareService vmWareService;
-
-	public DataCenterThread(VMWareService vmWareService) {
-		this.vmWareService = vmWareService;
-	}
+	private int totalDataCenter;
+	private int totalCluster;
+	private int totalHost;
+	private int totalVMs;
 
 	public void run() {
 
-		logger.info("{} Starting datacenter search", Common.getLogHeader(this, "run"));
+		logger.debug("{} Starting datacenter search", Common.getLogHeader(this, "run"));
+
+		this.totalDataCenter = 0;
+		this.totalCluster = 0;
+		this.totalHost = 0;
+
 		List<Thread> listThread = new ArrayList<>();
 
 		Folder rootFolder = this.vmWareService.getServiceInstance().getRootFolder();
@@ -39,6 +44,8 @@ public class DataCenterThread extends Thread {
 					Common.getLogHeader(this, "run"),
 					datacenters.length,
 					this.vmWareService.getVmwareConfig().getHost());
+
+			this.totalDataCenter = datacenters.length;
 
 			for (ManagedEntity datacenterEntity : datacenters) {
 				Datacenter datacenter = (Datacenter) datacenterEntity;
@@ -51,9 +58,13 @@ public class DataCenterThread extends Thread {
 						clusters.length,
 						datacenter.getName());
 
+				this.totalCluster += clusters.length;
+
 				for (ManagedEntity clusterEntity : clusters) {
 					ClusterComputeResource cluster = (ClusterComputeResource) clusterEntity;
 					HostSystem[] hosts = cluster.getHosts();
+
+					this.totalHost += hosts.length;
 
 					for (HostSystem host : hosts) {
 						Thread thread = new HostThread(datacenter.getName(), cluster.getName(), host);
@@ -71,25 +82,26 @@ public class DataCenterThread extends Thread {
 
 		try {
 
-			logger.info("{} Starting threads of HostThreads...", Common.getLogHeader(this, "run"));
+			logger.debug("{} Starting threads of HostThreads...", Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.start();
 			}
 
-			logger.info("{} Joinning threads and waiting it to finish...",
+			logger.debug("{} Joinning threads and waiting it to finish...",
 					Common.getLogHeader(this, "run"));
 			for (Thread thread : listThread) {
 				thread.join();
 			}
 
-			logger.info("{} Combining the VMs found on all hosts...", Common.getLogHeader(this, "run"));
+			logger.debug("{} Combining the VMs found on all hosts...", Common.getLogHeader(this, "run"));
 			this.vmWareService.listVMWareInfo = new HashMap<>();
 			for (Thread thread : listThread) {
 				this.vmWareService.listVMWareInfo.putAll(((HostThread) thread).getVMs());
 			}
-			logger.info("{} Total Hosts found [{}]", Common.getLogHeader(this, "run"),
+			this.totalVMs = this.vmWareService.listVMWareInfo.size();
+			logger.debug("{} Hosts found [{}]", Common.getLogHeader(this, "run"),
 					this.vmWareService.listVMWareInfo.size());
-			logger.info("{} Finalized!", Common.getLogHeader(this, "run"));
+			logger.debug("{} ", Common.getLogHeader(this, "run"));
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -97,4 +109,23 @@ public class DataCenterThread extends Thread {
 
 	}
 
+	public int getTotalDataCenter() {
+		return totalDataCenter;
+	}
+
+	public int getTotalCluster() {
+		return totalCluster;
+	}
+
+	public int getTotalHost() {
+		return totalHost;
+	}
+
+	public DataCenterThread(VMWareService vmWareService) {
+		this.vmWareService = vmWareService;
+	}
+
+	public int getTotalVMs() {
+		return totalVMs;
+	}
 }

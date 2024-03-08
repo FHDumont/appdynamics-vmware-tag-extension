@@ -27,48 +27,56 @@ public class EventsThread extends Thread {
 		this.vmWareService = vmWareService;
 	}
 
+	private int totalEvents;
+
 	public void run() {
 
-		logger.info("{} Starting migration events search...", Common.getLogHeader(this, "run"));
+		logger.debug("{} Starting migration events search...", Common.getLogHeader(this, "run"));
 
 		this.vmWareService.listEvents = new ConcurrentHashMap<>();
 
 		try {
 
-			logger.info("{} Searching events for cluster [{}]...",
+			logger.debug("{} Searching events for cluster [{}]...",
 					Common.getLogHeader(this, "run"),
 					this.vmWareService.getServiceInstance().getAboutInfo().getName());
+
+			this.totalEvents = 0;
 
 			this.eventManager = this.vmWareService.getServiceInstance().getEventManager();
 			EventHistoryCollector eventHistoryCollector = createEventHistoryCollector();
 
 			Event[] listEvents = eventHistoryCollector.getLatestPage();
-			for (Event event : listEvents) {
+			if (listEvents != null) {
+				for (Event event : listEvents) {
 
-				logger.debug(
-						"{} Event [{}] EventID [{}] Full Formatted Message [{}] Created Time [{}] VM Reference [{} = {}]",
-						Common.getLogHeader(this, "run"),
-						event.getClass().getName(),
-						event.getKey(),
-						event.getFullFormattedMessage(),
-						event.getCreatedTime().getTime(),
-						event.getVm().getName(),
-						event.getVm().getVm().get_value());
+					logger.debug(
+							"{} Event [{}] EventID [{}] Full Formatted Message [{}] Created Time [{}] VM Reference [{} = {}]",
+							Common.getLogHeader(this, "run"),
+							event.getClass().getName(),
+							event.getKey(),
+							event.getFullFormattedMessage(),
+							event.getCreatedTime().getTime(),
+							event.getVm().getName(),
+							event.getVm().getVm().get_value());
 
-				Event eventAlreadyExist = this.vmWareService.listEvents.get(event.getVm().getName().toLowerCase());
-				if (eventAlreadyExist != null) {
-					if (eventAlreadyExist.getCreatedTime().before(event.getCreatedTime())) {
+					Event eventAlreadyExist = this.vmWareService.listEvents.get(event.getVm().getName().toLowerCase());
+					if (eventAlreadyExist != null) {
+						if (eventAlreadyExist.getCreatedTime().before(event.getCreatedTime())) {
+							this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), event);
+						}
+					} else {
 						this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), event);
 					}
-				} else {
-					this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), event);
 				}
 			}
 
-			logger.info("{} Total events found [{}] for this cluster [{}]",
+			logger.debug("{} Total events found [{}] for this cluster [{}]",
 					Common.getLogHeader(this, "run"),
 					this.vmWareService.listEvents.size(),
 					this.vmWareService.getServiceInstance().getAboutInfo().getName());
+
+			this.totalEvents += this.vmWareService.listEvents.size();
 
 		} catch (Exception e) {
 			logger.error("{} Unable get events from cluster [{}]",
@@ -76,6 +84,10 @@ public class EventsThread extends Thread {
 					this.vmWareService.getVmwareConfig().getHost(), e);
 		}
 
+	}
+
+	public int getTotalEvents() {
+		return this.totalEvents;
 	}
 
 	private EventHistoryCollector createEventHistoryCollector() throws Exception {

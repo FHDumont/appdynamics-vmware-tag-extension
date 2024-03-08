@@ -30,7 +30,7 @@ public class ControllerService {
 	private HttpClient client;
 	private AccessToken accessToken;
 
-	private ControllerInfo controllerInfo;
+	public ControllerInfo controllerInfo;
 	public Map<String, Server> listServers;
 	public List<Server> listServerTagged;
 
@@ -145,7 +145,7 @@ public class ControllerService {
 	}
 
 	public void refreshServers() throws Exception {
-		logger.info("{} Searching servers...", Common.getLogHeader(this, "refreshServers"));
+		logger.debug("{} Searching servers...", Common.getLogHeader(this, "refreshServers"));
 
 		this.listServers = new ConcurrentHashMap<>();
 
@@ -164,7 +164,7 @@ public class ControllerService {
 			this.listServers.put(server.getServerName().toLowerCase(), server);
 		}
 
-		logger.info("{} Found {} servers (machine agents)", Common.getLogHeader(this, "refreshServers"),
+		logger.debug("{} Found {} servers (machine agents)", Common.getLogHeader(this, "refreshServers"),
 				this.listServers.size());
 
 	}
@@ -174,14 +174,14 @@ public class ControllerService {
 			this.refreshServers();
 		}
 
-		logger.info("{} Found {} servers (machine agents)", Common.getLogHeader(this, "getServers"),
+		logger.debug("{} Found {} servers (machine agents)", Common.getLogHeader(this, "getServers"),
 				this.listServers.size());
 
 		return this.listServers;
 	}
 
 	public void publishTags(String jsonAPI) throws Exception {
-		logger.info("{} Publishing tags", Common.getLogHeader(this, "publishTags"));
+		logger.debug("{} Publishing tags", Common.getLogHeader(this, "publishTags"));
 		logger.debug("{} Tags [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
 
 		if (jsonAPI != null && !jsonAPI.equals("")) {
