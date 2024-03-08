@@ -89,7 +89,7 @@ public class VMWareTagExtensionTask implements AMonitorTaskRunnable {
 
 				// ==>VMWARE CONFIGURATIONS
 				VMWareConfig[] listVMWareConfig = new ObjectMapper().convertValue(
-						yamlConfig.get(Constants.VMWARE_SERVERS),
+						yamlConfig.get(Constants.VCENTER_SERVERS),
 						VMWareConfig[].class);
 
 				this.listVMWareService = new HashMap<>();
