@@ -4,8 +4,6 @@ public class ControllerInfo {
 
 	private String displayName;
 	private String controllerHost;
-	private int controllerPort;
-	private boolean controllerSslEnabled;
 	private String clientId;
 	private String clientSecret;
 	private String proxyHost;
@@ -42,22 +40,6 @@ public class ControllerInfo {
 
 	public void setControllerHost(String controllerHost) {
 		this.controllerHost = controllerHost;
-	}
-
-	public int getControllerPort() {
-		return controllerPort;
-	}
-
-	public void setControllerPort(int controllerPort) {
-		this.controllerPort = controllerPort;
-	}
-
-	public boolean isControllerSslEnabled() {
-		return controllerSslEnabled;
-	}
-
-	public void setControllerSslEnabled(boolean controllerSslEnabled) {
-		this.controllerSslEnabled = controllerSslEnabled;
 	}
 
 	public String getClientId() {

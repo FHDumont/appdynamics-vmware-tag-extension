@@ -1,5 +1,5 @@
-servers:
-  - displayName: "vSphere Production"
+vcenters:
+  - displayName: "vCenter Production"
     host: "10.0.0.1"
     username: "admin"
     password: "password"
@@ -7,8 +7,6 @@ servers:
 controllers:
   - displayName: "Controller Production"
     controllerHost: "https://xxxx.saas.appdynamics.com"
-    controllerPort: 443
-    controllerSslEnabled: true
     clientId: "abc@def"
     clientSecret: "1895e99f-aa84-26cf-65d0-319403a1b4be"
     proxyHost:
@@ -20,4 +18,4 @@ metricPrefix: "Custom Metrics|VMWareTag"
 encryptionKey: ""
 frequency: 120000
 formatDate: dd/MM/yyyy HH:mm:ss
-publishMetrics: false
+publishMetrics: true
