@@ -21,33 +21,38 @@
     </properties>
 
     <dependencies>
+        <!-- mvn install:install-file -Dfile=machineagent.jar -DgroupId=local.repo
+        -DartifactId=machineagent -Dversion=23.6 -Dpackaging=jar -DgeneratePom=true -->
+        <dependency>
+            <groupId>local.repo</groupId>
+            <artifactId>machineagent</artifactId>
+            <version>23.6</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>com.appdynamics</groupId>
             <artifactId>appd-exts-commons</artifactId>
             <version>2.2.9</version>
         </dependency>
-        <dependency>
-            <groupId>com.appdynamics</groupId>
-            <artifactId>machineagent-repackaged</artifactId>
-            <version>4.0.5.1</version>
-            <scope>provided</scope>
-        </dependency>
 
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-api</artifactId>
-            <version>1.7.5</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-api</artifactId>
+            <version>2.23.0</version>
         </dependency>
         <dependency>
-            <groupId>org.slf4j</groupId>
-            <artifactId>slf4j-log4j12</artifactId>
-            <version>1.7.5</version>
+            <groupId>org.apache.logging.log4j</groupId>
+            <artifactId>log4j-core</artifactId>
+            <version>2.23.0</version>
         </dependency>
+
         <dependency>
             <groupId>com.toastcoders</groupId>
             <artifactId>yavijava</artifactId>
             <version>6.0.05</version>
         </dependency>
+
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
