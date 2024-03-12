@@ -7,7 +7,6 @@ public class Constants {
     public static final String CONTROLLERS = "controllers";
     public static final String VCENTER_SERVERS = "vcenters";
 
-    public static final String FREQUENCY = "frequency";
     public static final String METRIC_PREFIX = "metricPrefix";
     public static final String FORMAT_DATE = "formatDate";
     public static final String PUBLISH_METRICS = "publishMetrics";

@@ -12,9 +12,8 @@ code.
         <description>VMWare AppD Tag</description>
         <monitor-configuration></monitor-configuration>
         <monitor-run-task>
-                <!-- <execution-style>scheduled</execution-style> -->
                 <execution-style>periodic</execution-style>
-                <execution-frequency-in-seconds>60</execution-frequency-in-seconds>
+                <execution-frequency-in-seconds>120</execution-frequency-in-seconds>
                 <name>VMWare AppD Tag Run Task</name>
                 <display-name>VMWare AppD Tag Task</display-name>
                 <description>VMWare AppD Tag Task</description>

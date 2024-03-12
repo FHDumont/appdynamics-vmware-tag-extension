@@ -40,7 +40,6 @@ public class VMWareTagExtension extends AManagedMonitor {
 	private Map<String, ControllerService> listControllerService;
 	private Map<String, Object> yamlConfig;
 	private List<Thread> threads = new ArrayList<>();
-	private Boolean isRunning;
 	private int totalMetricsPublished;
 	private String metricPrefix = "Custom Metrics|VMWare-TAG|";
 
@@ -54,9 +53,10 @@ public class VMWareTagExtension extends AManagedMonitor {
 			throw new TaskExecutionException("Confluent Config File Not Set, nothing to do");
 		}
 
-		this.isRunning = true;
 		yamlConfig = new HashMap<>();
 		Instant startTime = Instant.now();
+
+		String finalMessage = "Task processed!";
 
 		try {
 			this.logger.info("{} Starting task", Common.getLogHeader(this, "run"));
@@ -210,7 +210,6 @@ public class VMWareTagExtension extends AManagedMonitor {
 				listControllerService.forEach((host, controlerService) -> {
 					for (Server server : controlerService.listServerTagged) {
 						try {
-							// metricPrefix: "Custom Metrics|VMWareTag"
 							String metricName = server.getDatacenterName() +
 									"|" + server.getClusterName() +
 									"|" + server.getHostName() + "|";
@@ -226,7 +225,9 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 							publicMetric(metricName + "Overall CPU Usage %",
 									server.getHostStats().getOverallCpuUsagePerc(),
-									"OBSERVATION", "AVERAGE", "COLLECTIVE");
+									MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+									MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+									MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE);
 
 							// publicMetric(baseMetricName,
 							// "Memory Size",
@@ -241,14 +242,18 @@ public class VMWareTagExtension extends AManagedMonitor {
 							// String.valueOf(server.getHostStats().getOverallMemoryPerc()));
 							publicMetric(metricName + "Overall Memory Usage %",
 									server.getHostStats().getOverallMemoryPerc(),
-									"OBSERVATION", "AVERAGE", "COLLECTIVE");
+									MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+									MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+									MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE);
 
 							// publicMetric(metricName,
 							// "Total Virtual Machines",
 							// String.valueOf(server.getHostStats().getTotalVirtualMachine()));
 							publicMetric(metricName + "Total Virtual Machines",
 									server.getHostStats().getTotalVirtualMachine(),
-									"OBSERVATION", "AVERAGE", "COLLECTIVE");
+									MetricWriter.METRIC_AGGREGATION_TYPE_OBSERVATION,
+									MetricWriter.METRIC_TIME_ROLLUP_TYPE_CURRENT,
+									MetricWriter.METRIC_CLUSTER_ROLLUP_TYPE_COLLECTIVE);
 
 						} catch (Exception e) {
 							logger.error("{} {}...",
@@ -265,18 +270,22 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 		} catch (Exception e) {
 			logger.error("{} Exception on running task {}", Common.getLogHeader(this, "run"), e.getMessage(), e);
+			finalMessage = "ERROR = " + e.getMessage();
 		}
 
 		try {
 			Duration duration = Duration.between(startTime, Instant.now());
-			logger.info("{} Execution time {}s, waiting next round {}ms", Common.getLogHeader(this, "run"),
-					duration.getSeconds(), yamlConfig.get(Constants.FREQUENCY));
-			this.isRunning = false;
+			logger.info("{} Execution time {}s, waiting next round.", Common.getLogHeader(this, "run"),
+					duration.getSeconds());
+
+			finalMessage = String.format("Execution time {}s, waiting next round.", duration.getSeconds());
+
 		} catch (Exception e) {
 			e.printStackTrace();
+			finalMessage = "ERROR = " + e.getMessage();
 		}
 
-		return null;
+		return new TaskOutput(finalMessage);
 
 	}
 
@@ -286,10 +295,6 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 	public Map<String, ControllerService> getListControllerService() {
 		return listControllerService;
-	}
-
-	public Boolean isRunning() {
-		return this.isRunning;
 	}
 
 	protected void publicMetric(String metricName, Object metricValue,

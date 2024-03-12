@@ -16,6 +16,5 @@ controllers:
 numberOfThreads: 30
 metricPrefix: "Custom Metrics|VMWare-TAG|"
 encryptionKey: ""
-frequency: 120000
 formatDate: dd/MM/yyyy HH:mm:ss
 publishMetrics: true
