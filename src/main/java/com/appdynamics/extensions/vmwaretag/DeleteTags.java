@@ -10,22 +10,25 @@ public class DeleteTags {
 	public static void main(String... args) {
 		try {
 			ControllerInfo controllerInfo = new ControllerInfo();
-			controllerInfo.setDisplayName("SE-LAB");
-			controllerInfo.setControllerHost("https://se-lab.saas.appdynamics.com");
-			controllerInfo.setClientId("fdumont_api@se-lab");
-			controllerInfo.setClientSecret("1802e99e-aa67-45cf-82d0-319403a1b4be");
+
+			controllerInfo.setDisplayName("MY CONTROLLER");
+			controllerInfo.setControllerHost("https://XXX-preprod.saas.appdynamics.com");
+			controllerInfo.setClientId("apiclient@customername");
+			controllerInfo.setClientSecret("f3dsfadb8-7sd8-4347-asdd-d886576195f2");
 
 			ControllerService controllerService = new ControllerService(controllerInfo);
 
 			controllerService.refreshServers();
+
+			print(String.format("Total servers [%s]", controllerService.listServers.size()));
 			controllerService.listServers.forEach((serverName, server) -> {
 				TagKeys[] listTagKey;
 				try {
-					listTagKey = controllerService.getTags(server.getMachineId(), EntityType.Server);
+					listTagKey = controllerService.getTags(server.getMachineId(),
+							EntityType.Server);
 					for (TagKeys tagKey : listTagKey) {
-						print(String.format("[%s] [%s] [%s]", tagKey.getId(), tagKey.getKey(),
-								tagKey.getValue()));
 						if (tagKey.getKey().toLowerCase().contains("esx")) {
+							print(String.format("[%s] [%s] [%s]", tagKey.getId(), tagKey.getKey(), tagKey.getValue()));
 							controllerService.deleteTag(tagKey.getId(), server.getMachineId(), EntityType.Server);
 						}
 					}
