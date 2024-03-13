@@ -31,6 +31,7 @@ public class PublishTagsThread extends Thread {
 	private Map<Integer, Boolean> listApplicationWithMigration;
 	private Map<Integer, Boolean> listTierWithEvent;
 	private String formatDate;
+	private List<Server> listServerToPublish;
 
 	public PublishTagsThread(ControllerService controllerService, String formatDate) {
 		this.controllerService = controllerService;
@@ -48,19 +49,20 @@ public class PublishTagsThread extends Thread {
 
 			listApplicationWithMigration = new HashMap<>();
 			listTierWithEvent = new HashMap<>();
-			List<Server> listServerToPublish = new ArrayList<>();
+			listServerToPublish = new ArrayList<>();
 
-			for (int idx = 0; idx < this.controllerService.listServerTagged.size(); idx++) {
-				Server server = this.controllerService.listServerTagged.get(idx);
+			int idx = 1;
+			for (String serverName : this.controllerService.listServerTagged.keySet()) {
+				Server server = this.controllerService.listServerTagged.get(serverName);
 
 				logger.debug("{} Server Tagged {} ", server.toString(), Common.getLogHeader(this, "run"));
-
 				// ALL SERVERS THAT HAVE APPLICATION WILL HAVE THE APMCORRELATION FIELD FILLED,
 				// SO WHEN CREATING THE JSON, YOU CAN CREATE SPECIFIC JSONS FOR EACH OBJECT TYPE
 				this.controllerService.findAPMCorrelation(server);
 
 				listServerToPublish.add(server);
 
+				// IF NECESSARY DELETE ALL TAGS BEFORE TO CREATE NEW ONES
 				// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
 
 				// Publish after each number of servers entities found, regardless of
@@ -70,8 +72,8 @@ public class PublishTagsThread extends Thread {
 					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
 					listServerToPublish = new ArrayList<>();
 				}
+				idx += 1;
 			}
-
 			if (listServerToPublish.size() > 0) {
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));

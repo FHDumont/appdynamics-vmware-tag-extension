@@ -1,6 +1,6 @@
 package com.appdynamics.extensions.vmwaretag.threads;
 
-import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -18,10 +18,8 @@ public class MatchThread extends Thread {
 
 	public static final Logger logger = ExtensionsLoggerFactory.getLogger(MatchThread.class);
 
-	private ControllerService controllerService;
-	private List<VMWareService> listVMWareService;
-
-	private int totalServerTagged;
+	public ControllerService controllerService;
+	public List<VMWareService> listVMWareService;
 
 	public MatchThread(ControllerService controllerService, List<VMWareService> listVMWareService) {
 		this.controllerService = controllerService;
@@ -32,13 +30,14 @@ public class MatchThread extends Thread {
 		logger.debug("{} Starting matching for controller [{}]", Common.getLogHeader(this, "run"),
 				this.controllerService.controllerInfo.getControllerHost());
 
-		this.controllerService.listServerTagged = new ArrayList<>();
+		this.controllerService.listServerTagged = new HashMap<>();
 
 		for (VMWareService vmwareService : listVMWareService) {
 			try {
 
 				logger.debug("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
-						vmwareService.getVmwareConfig().getDisplayName(), vmwareService.getVmwareConfig().getHost());
+						controllerService.controllerInfo.getControllerHost(),
+						vmwareService.getVmwareConfig().getHost());
 				Map<String, VMWareInfo> listVMs = vmwareService.getVMs();
 				Map<String, Event> listEvents = vmwareService.getEvents();
 
@@ -66,7 +65,7 @@ public class MatchThread extends Thread {
 								vmServerTagged.setMigrationMessage(event.getFullFormattedMessage());
 							}
 
-							this.controllerService.listServerTagged.add(vmServerTagged);
+							this.controllerService.listServerTagged.put(serverName, vmServerTagged);
 						} catch (CloneNotSupportedException e) {
 							e.printStackTrace();
 						}
@@ -74,9 +73,11 @@ public class MatchThread extends Thread {
 					}
 				});
 
-				logger.debug("{} Total Server Tagged {} ", Common.getLogHeader(this, "run"),
-						this.controllerService.listServerTagged.size());
-				this.totalServerTagged += this.controllerService.listServerTagged.size();
+				logger.debug("{} Total Server Tagged {} for controller {} and cluster {}",
+						Common.getLogHeader(this, "run"),
+						this.controllerService.listServerTagged.size(),
+						this.controllerService.controllerInfo.getControllerHost(),
+						vmwareService.getVmwareConfig().getHost());
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -87,7 +88,7 @@ public class MatchThread extends Thread {
 	}
 
 	public int getTotalServerTagged() {
-		return this.totalServerTagged;
+		return this.controllerService.listServerTagged.size();
 	}
 
 }

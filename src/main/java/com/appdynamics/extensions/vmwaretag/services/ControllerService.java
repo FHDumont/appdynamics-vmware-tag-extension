@@ -7,7 +7,6 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,7 +32,7 @@ public class ControllerService {
 
 	public ControllerInfo controllerInfo;
 	public Map<String, Server> listServers;
-	public List<Server> listServerTagged;
+	public Map<String, Server> listServerTagged;
 
 	public ControllerService(ControllerInfo controllerInfo) throws Exception {
 		this.controllerInfo = controllerInfo;
@@ -152,6 +151,10 @@ public class ControllerService {
 		String payload = String.format(
 				"{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
 				System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
+		// String payload = String.format(
+		// "{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tags\":{\"ESX Had Migration Last
+		// 24h\":[\"no\",\"yes\"]},\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
+		// System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
 
 		HttpResponse<String> httpResponse = getRequest("/controller/sim/v2/user/machines/keys",
 				Constants.HTTP_METHOD_POST, payload);

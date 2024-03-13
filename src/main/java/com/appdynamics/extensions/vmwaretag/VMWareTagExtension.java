@@ -10,7 +10,6 @@ import java.util.List;
 import java.util.Map;
 
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
-import com.appdynamics.extensions.vmwaretag.model.Server;
 import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.services.ControllerService;
 import com.appdynamics.extensions.vmwaretag.services.VMWareService;
@@ -39,7 +38,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 	private Map<String, VMWareService> listVMWareService;
 	private Map<String, ControllerService> listControllerService;
 	private Map<String, Object> yamlConfig;
-	private List<Thread> threads = new ArrayList<>();
+	private List<Thread> threads;
 	private int totalMetricsPublished;
 	private String metricPrefix = "Custom Metrics|VMWare-TAG|";
 
@@ -55,6 +54,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 		yamlConfig = new HashMap<>();
 		Instant startTime = Instant.now();
+		Instant startSubTask;
 
 		String finalMessage = "Task processed!";
 
@@ -102,6 +102,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 			// CREATING THREADS FOR THE CONTROLLERS
 			// LOADING ALL SERVERS (MACHINE AGENTS)
+			threads = new ArrayList<>();
 			listControllerService.forEach((controllerHost, controllerService) -> {
 				ServerThread serverThread = new ServerThread(controllerService);
 				serverThread.setName(controllerHost);
@@ -122,6 +123,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 				threads.add(eventsThread);
 			});
 
+			startSubTask = Instant.now();
 			this.logger.debug("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
 			for (Thread thread : threads) {
 				thread.start();
@@ -133,7 +135,8 @@ public class VMWareTagExtension extends AManagedMonitor {
 				thread.join();
 			}
 
-			this.logger.info("{} Data capture threads finished!", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Data capture threads finished! Execution time {}s", Common.getLogHeader(this, "run"),
+					Duration.between(startSubTask, Instant.now()).getSeconds());
 
 			int totalDataCenter = 0;
 			int totalCluster = 0;
@@ -160,6 +163,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 			// MATCHING MACHINE AGENTS WITH VIRTUAL MACHINES
 			threads = new ArrayList<>();
+			startSubTask = Instant.now();
 			this.logger.debug("{} Starting match threads...", Common.getLogHeader(this, "run"));
 			listControllerService.forEach((host, controlerService) -> {
 				Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()));
@@ -172,19 +176,34 @@ public class VMWareTagExtension extends AManagedMonitor {
 			for (Thread thread : threads) {
 				thread.join();
 			}
-			this.logger.info("{} Data match threads finished!", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Data match threads finished! Execution time {}s", Common.getLogHeader(this, "run"),
+					Duration.between(startSubTask, Instant.now()).getSeconds());
 
 			int totalServerTagged = 0;
 			for (Thread thread : threads) {
 				if (thread instanceof MatchThread) {
+					MatchThread matchTread = (MatchThread) thread;
+					this.logger.info("{} Total Server Tagged {} for the Controller {}",
+							Common.getLogHeader(this, "run"),
+							matchTread.getTotalServerTagged(),
+							matchTread.controllerService.controllerInfo.getControllerHost());
+					if (this.logger.isDebugEnabled()) {
+						for (VMWareService vmwareService : matchTread.listVMWareService) {
+							this.logger.debug("{}     VMs {} for the vCenter {}",
+									Common.getLogHeader(this, "run"),
+									vmwareService.getVMs().size(),
+									vmwareService.getVmwareConfig().getHost());
+						}
+					}
 					totalServerTagged += ((MatchThread) thread).getTotalServerTagged();
 				}
 			}
-			this.logger.info("{} Total servers to create tags (matched) [{}]",
+			this.logger.info("{} Final total servers to create tags (matched) [{}]",
 					Common.getLogHeader(this, "run"), totalServerTagged);
 
 			// PUBLISHING TAGS
 			threads = new ArrayList<>();
+			startSubTask = Instant.now();
 			this.logger.debug("{} Starting publish tags threads...", Common.getLogHeader(this, "run"));
 			listControllerService.forEach((host, controlerService) -> {
 				Thread publishThread = new PublishTagsThread(controlerService,
@@ -198,17 +217,20 @@ public class VMWareTagExtension extends AManagedMonitor {
 			for (Thread thread : threads) {
 				thread.join();
 			}
-			this.logger.info("{} Publish tags threads finished!", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Publish tags threads finished! Execution time {}s", Common.getLogHeader(this, "run"),
+					Duration.between(startSubTask, Instant.now()).getSeconds());
 
 			threads = new ArrayList<>();
 			// THE MATCH WILL IDENTIFY ONLY THE HOSTS THAT HAVE VMs ON THE CONTROLLER'S
 			// SERVERS, PUBLISH METRICS ONLY FOR THESE FOUND HOSTS
 			this.totalMetricsPublished = 0;
+			startSubTask = Instant.now();
 			if (yamlConfig.get(Constants.PUBLISH_METRICS) != null
 					&& (boolean) yamlConfig.get(Constants.PUBLISH_METRICS)) {
 				this.logger.info("{} ==> Publishing metrics values...", Common.getLogHeader(this, "run"));
 				listControllerService.forEach((host, controlerService) -> {
-					for (Server server : controlerService.listServerTagged) {
+					controlerService.listServerTagged.forEach((serverName, server) -> {
+
 						try {
 							String metricName = server.getDatacenterName() +
 									"|" + server.getClusterName() +
@@ -260,13 +282,14 @@ public class VMWareTagExtension extends AManagedMonitor {
 									Common.getLogHeader(this, "run"),
 									e.getMessage(), e);
 						}
-					}
+					});
+
 				});
 
 			}
 
-			logger.info("{} Total metrics published [{}]", Common.getLogHeader(this, "run"),
-					this.totalMetricsPublished);
+			logger.info("{} Total metrics published [{}], execution time {}s", Common.getLogHeader(this, "run"),
+					this.totalMetricsPublished, Duration.between(startSubTask, Instant.now()).getSeconds());
 
 		} catch (Exception e) {
 			logger.error("{} Exception on running task {}", Common.getLogHeader(this, "run"), e.getMessage(), e);
@@ -274,11 +297,9 @@ public class VMWareTagExtension extends AManagedMonitor {
 		}
 
 		try {
-			Duration duration = Duration.between(startTime, Instant.now());
-			logger.info("{} Execution time {}s, waiting next round.", Common.getLogHeader(this, "run"),
-					duration.getSeconds());
-
-			finalMessage = String.format("Execution time {}s, waiting next round.", duration.getSeconds());
+			finalMessage = String.format("Final execution time %ss, waiting next round.",
+					Duration.between(startTime, Instant.now()).getSeconds());
+			logger.info("{} {}", Common.getLogHeader(this, "run"), finalMessage);
 
 		} catch (Exception e) {
 			e.printStackTrace();
