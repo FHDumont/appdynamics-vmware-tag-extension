@@ -59,7 +59,7 @@ The tag "ESX Last Update" indicates the last time the extension updated the valu
 
 The metrics listed below will be created for each physical host found and published on the controller configured in the machine agent. The metrics will have the hierarchy of datacenter, cluster, and host.
 
-- Overall CPU Usage %
+- ESX Overall CPU Usage %
 - ESX Overall Memory Usage %
 - ESX Total Virtual Machine
 
