@@ -1,5 +1,7 @@
 # AppDynamics VMWare Tag Extension
 
+[![published](https://static.production.devnetcloud.com/codeexchange/assets/images/devnet-published.svg)](https://developer.cisco.com/codeexchange/github/repo/FHDumont/appdynamics-vmware-tag-extension)
+
 This extension works only with the standalone machine agent.
 
 The purpose of this extension is to match the existing virtual machines in the vCenter with the servers monitored by the machine agent. When a server monitored by the Machine Agent is identified in the vCenter, tags will be created on the server, application, tier, and node with the information of the physical servers that run the virtual machine. Additionally, three metrics will be created with information on the consumption of the physical hosts.
