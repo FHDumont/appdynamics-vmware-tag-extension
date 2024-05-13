@@ -22,7 +22,7 @@ code.
                         <argument name="config-file" is-required="true" default-value="config.yml" />
                 </task-arguments>
                 <java-task>
-                        <classpath>vwmare-tag-extension.jar</classpath>
+                        <classpath>vmware-tag-extension.jar</classpath>
                         <load-jars-in-classpath-dirs>true</load-jars-in-classpath-dirs>
                         <impl-class>com.appdynamics.extensions.vmwaretag.VMWareTagExtension</impl-class>
                 </java-task>

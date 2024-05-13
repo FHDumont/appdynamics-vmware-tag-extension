@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.appdynamics.extensions</groupId>
-    <artifactId>vwmare-tag-extension</artifactId>
+    <artifactId>vmware-tag-extension</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
-    <name>vwmare-tag-extension</name>
+    <name>vmware-tag-extension</name>
 
     <url>http://maven.apache.org</url>
     <properties>
