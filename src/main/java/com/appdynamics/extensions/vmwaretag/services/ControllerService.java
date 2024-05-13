@@ -127,12 +127,12 @@ public class ControllerService {
 		}
 
 		httpResponse = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-		if (httpResponse.statusCode() != 200 || logger.isDebugEnabled()) {
+		if (httpResponse == null || httpResponse.statusCode() != 200 || logger.isDebugEnabled()) {
 			logger.debug("{} Requesting URL: [{}], method [{}] and payload: [{}]",
 					Common.getLogHeader(this, "getRequest"),
 					uri, method, payload);
 			logger.debug("{} Response Status Code: [{}]", Common.getLogHeader(this, "getRequest"),
-					httpResponse.statusCode());
+					httpResponse != null ? httpResponse.statusCode() : "---");
 			logger.debug("{} Response Status Body: [{}]", Common.getLogHeader(this, "getRequest"), httpResponse.body());
 		}
 		return httpResponse;

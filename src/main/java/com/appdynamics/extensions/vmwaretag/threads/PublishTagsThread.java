@@ -63,6 +63,16 @@ public class PublishTagsThread extends Thread {
 
 				// IF NECESSARY DELETE ALL TAGS BEFORE TO CREATE NEW ONES
 				// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
+				// DELETING SERVER TAGS
+				TagKeys[] listTagKey = controllerService.getTags(server.getMachineId(), EntityType.Server);
+				logger.debug(("{} Deleting tags for server [{}]"),
+						Common.getLogHeader(this, "run"),
+						server.getServerName());
+				for (TagKeys tagKey : listTagKey) {
+					if (tagKey.getKey().toLowerCase().contains("esx ")) {
+						this.controllerService.deleteTag(tagKey.getId(), server.getMachineId(), EntityType.Server);
+					}
+				}
 
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
