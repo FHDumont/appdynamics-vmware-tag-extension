@@ -6,7 +6,6 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
-
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -79,8 +78,9 @@ public class ControllerService {
 		HttpRequest httpRequest = null;
 		HttpResponse<String> httpResponse;
 
-		logger.debug("{} Requesting URL: [{}], method [{}] and payload: [{}]", Common.getLogHeader(this, "getRequest"),
-				uri, method, payload);
+		// logger.debug("{} Requesting URL: [{}], method [{}] and payload: [{}]",
+		// Common.getLogHeader(this, "getRequest"),
+		// uri, method, payload);
 
 		// TO CREATE THE TOKEN, THERE MUST BE NO ACCEPT IN THE HEADER AND THE
 		// CONTENT-TYPE SHOULD BE CONTENT TYPE OF FORM
@@ -127,10 +127,14 @@ public class ControllerService {
 		}
 
 		httpResponse = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
-		logger.debug("{} Response Status Code: [{}]", Common.getLogHeader(this, "getRequest"),
-				httpResponse.statusCode());
-		logger.debug("{} Response Status Body: [{}]", Common.getLogHeader(this, "getRequest"), httpResponse.body());
-
+		if (httpResponse.statusCode() != 200 || logger.isDebugEnabled()) {
+			logger.debug("{} Requesting URL: [{}], method [{}] and payload: [{}]",
+					Common.getLogHeader(this, "getRequest"),
+					uri, method, payload);
+			logger.debug("{} Response Status Code: [{}]", Common.getLogHeader(this, "getRequest"),
+					httpResponse.statusCode());
+			logger.debug("{} Response Status Body: [{}]", Common.getLogHeader(this, "getRequest"), httpResponse.body());
+		}
 		return httpResponse;
 
 	}
@@ -210,6 +214,13 @@ public class ControllerService {
 		getRequest(
 				String.format("/controller/restui/tags/tagOnEntity?tagId=%s&entityId=%s&entityType=%s",
 						tagId, entityID, entityType.convertToAPIEntityType()),
+				Constants.HTTP_METHOD_DELETE, "");
+	}
+
+	public void deleteAllTag(int entityID, EntityType entityType) throws Exception {
+		getRequest(
+				String.format("/controller/restui/tags/allTagsOnEntity?entityId=%s&entityType=%s",
+						entityID, entityType.convertToAPIEntityType()),
 				Constants.HTTP_METHOD_DELETE, "");
 	}
 

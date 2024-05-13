@@ -43,7 +43,7 @@ public class PublishTagsThread extends Thread {
 	}
 
 	public void run() {
-		logger.debug("{} Starting publish, formatDate [{}]", Common.getLogHeader(this, "run"), this.formatDate);
+		logger.info("{} Starting publish, formatDate [{}]", Common.getLogHeader(this, "run"), this.formatDate);
 
 		try {
 
@@ -51,11 +51,10 @@ public class PublishTagsThread extends Thread {
 			listTierWithEvent = new HashMap<>();
 			listServerToPublish = new ArrayList<>();
 
-			int idx = 1;
 			for (String serverName : this.controllerService.listServerTagged.keySet()) {
 				Server server = this.controllerService.listServerTagged.get(serverName);
 
-				logger.debug("{} Server Tagged {} ", server.toString(), Common.getLogHeader(this, "run"));
+				logger.debug("{} Server Tagged {} ", server.getServerName(), Common.getLogHeader(this, "run"));
 				// ALL SERVERS THAT HAVE APPLICATION WILL HAVE THE APMCORRELATION FIELD FILLED,
 				// SO WHEN CREATING THE JSON, YOU CAN CREATE SPECIFIC JSONS FOR EACH OBJECT TYPE
 				this.controllerService.findAPMCorrelation(server);
@@ -65,18 +64,9 @@ public class PublishTagsThread extends Thread {
 				// IF NECESSARY DELETE ALL TAGS BEFORE TO CREATE NEW ONES
 				// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
 
-				// Publish after each number of servers entities found, regardless of
-				// correlation
-				if (idx > 0 && idx % 100 == 0) {
-					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
-					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
-					listServerToPublish = new ArrayList<>();
-				}
-				idx += 1;
-			}
-			if (listServerToPublish.size() > 0) {
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
+				listServerToPublish = new ArrayList<>();
 			}
 
 			this.controllerService.publishTags(createJsonAPI(null, EntityType.Application));

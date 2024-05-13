@@ -9,6 +9,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.yaml.snakeyaml.Yaml;
+
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
 import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.services.ControllerService;
@@ -26,10 +30,6 @@ import com.singularity.ee.agent.systemagent.api.MetricWriter;
 import com.singularity.ee.agent.systemagent.api.TaskExecutionContext;
 import com.singularity.ee.agent.systemagent.api.TaskOutput;
 import com.singularity.ee.agent.systemagent.api.exception.TaskExecutionException;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-import org.yaml.snakeyaml.Yaml;
 
 public class VMWareTagExtension extends AManagedMonitor {
 
@@ -124,7 +124,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 			});
 
 			startSubTask = Instant.now();
-			this.logger.debug("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Starting data capture threads...", Common.getLogHeader(this, "run"));
 			for (Thread thread : threads) {
 				thread.start();
 			}
@@ -164,7 +164,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 			// MATCHING MACHINE AGENTS WITH VIRTUAL MACHINES
 			threads = new ArrayList<>();
 			startSubTask = Instant.now();
-			this.logger.debug("{} Starting match threads...", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Starting match threads...", Common.getLogHeader(this, "run"));
 			listControllerService.forEach((host, controlerService) -> {
 				Thread matchThread = new MatchThread(controlerService, new ArrayList<>(listVMWareService.values()));
 				matchThread.setName(host);
@@ -189,7 +189,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 							matchTread.controllerService.controllerInfo.getControllerHost());
 					if (this.logger.isDebugEnabled()) {
 						for (VMWareService vmwareService : matchTread.listVMWareService) {
-							this.logger.debug("{}     VMs {} for the vCenter {}",
+							this.logger.info("{}     VMs {} for the vCenter {}",
 									Common.getLogHeader(this, "run"),
 									vmwareService.getVMs().size(),
 									vmwareService.getVmwareConfig().getHost());
@@ -204,7 +204,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 			// PUBLISHING TAGS
 			threads = new ArrayList<>();
 			startSubTask = Instant.now();
-			this.logger.debug("{} Starting publish tags threads...", Common.getLogHeader(this, "run"));
+			this.logger.info("{} Starting publish tags threads...", Common.getLogHeader(this, "run"));
 			listControllerService.forEach((host, controlerService) -> {
 				Thread publishThread = new PublishTagsThread(controlerService,
 						String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)));
