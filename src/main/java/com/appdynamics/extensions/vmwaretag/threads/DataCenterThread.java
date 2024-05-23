@@ -104,7 +104,9 @@ public class DataCenterThread extends Thread {
 			logger.debug("{} ", Common.getLogHeader(this, "run"));
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "run"),
+					e.getMessage(), e);
 		}
 
 	}

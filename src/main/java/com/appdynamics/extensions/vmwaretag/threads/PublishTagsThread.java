@@ -51,6 +51,7 @@ public class PublishTagsThread extends Thread {
 			listTierWithEvent = new HashMap<>();
 			listServerToPublish = new ArrayList<>();
 
+			int idx = 1;
 			for (String serverName : this.controllerService.listServerTagged.keySet()) {
 				Server server = this.controllerService.listServerTagged.get(serverName);
 
@@ -74,6 +75,17 @@ public class PublishTagsThread extends Thread {
 					}
 				}
 
+				// Publish after each number of servers entities found, regardless of
+				// correlation
+				if (idx > 0 && idx % 10 == 0) {
+					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
+					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
+					listServerToPublish = new ArrayList<>();
+				}
+				idx += 1;
+			}
+
+			if (listServerToPublish.size() > 0) {
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
 				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
 				listServerToPublish = new ArrayList<>();
@@ -92,7 +104,9 @@ public class PublishTagsThread extends Thread {
 			});
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "run"),
+					e.getMessage(), e);
 		}
 
 	}
@@ -229,39 +243,45 @@ public class PublishTagsThread extends Thread {
 		// tagKey.setValue(server.getVmMOR());
 		// listKeys.add(tagKey);
 
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX Had Migration Last 24h");
-		tagKey.setValue(server.isHadMigration() ? "yes" : "no");
-		listKeys.add(tagKey);
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX Had Migration Last 24h");
+		// tagKey.setValue(server.isHadMigration() ? "yes" : "no");
+		// listKeys.add(tagKey);
 
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX Overall CPU Usage");
 		// tagKey.setValue(server.getHostStats().getOverallCpuUsage() + " MHz");
 		// listKeys.add(tagKey);
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX Overall CPU Usage %");
-		tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc() + " %");
-		listKeys.add(tagKey);
+
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX Overall CPU Usage %");
+		// tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc() + " %");
+		// listKeys.add(tagKey);
+
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX CPU Cores");
 		// tagKey.setValue(String.valueOf(server.getHostStats().getCpuCores()));
 		// listKeys.add(tagKey);
+
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX Overall Memory Usage");
 		// tagKey.setValue(server.getHostStats().getOverallMemoryUsage() + " GB");
 		// listKeys.add(tagKey);
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX Overall Memory Usage %");
-		tagKey.setValue(server.getHostStats().getOverallMemoryPerc() + " %");
-		listKeys.add(tagKey);
+
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX Overall Memory Usage %");
+		// tagKey.setValue(server.getHostStats().getOverallMemoryPerc() + " %");
+		// listKeys.add(tagKey);
+
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX Memory Size");
 		// tagKey.setValue(server.getHostStats().getMemorySize() + " GB");
 		// listKeys.add(tagKey);
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX Total Virtual Machine");
-		tagKey.setValue(String.valueOf(server.getHostStats().getTotalVirtualMachine()));
-		listKeys.add(tagKey);
+
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX Total Virtual Machine");
+		// tagKey.setValue(String.valueOf(server.getHostStats().getTotalVirtualMachine()));
+		// listKeys.add(tagKey);
 
 		if (server.isHadMigration()) {
 			tagKey = new TagKeys();

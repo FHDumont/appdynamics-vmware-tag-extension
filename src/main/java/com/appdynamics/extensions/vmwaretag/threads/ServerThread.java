@@ -29,7 +29,9 @@ public class ServerThread extends Thread {
 
 			this.totalServers = this.controllerService.listServers.size();
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "run"),
+					e.getMessage(), e);
 		}
 
 	}

@@ -46,7 +46,9 @@ public class HostThread extends Thread {
 					this.hostSystem.getName());
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "run"),
+					e.getMessage(), e);
 		}
 
 	}

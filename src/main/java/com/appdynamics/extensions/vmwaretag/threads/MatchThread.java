@@ -80,7 +80,9 @@ public class MatchThread extends Thread {
 						vmwareService.getVmwareConfig().getHost());
 
 			} catch (Exception e) {
-				e.printStackTrace();
+				logger.error("{} {}...",
+						Common.getLogHeader(this, "run"),
+						e.getMessage(), e);
 			}
 
 		}

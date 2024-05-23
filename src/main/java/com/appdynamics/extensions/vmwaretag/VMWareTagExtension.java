@@ -302,7 +302,9 @@ public class VMWareTagExtension extends AManagedMonitor {
 			logger.info("{} {}", Common.getLogHeader(this, "run"), finalMessage);
 
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "execute"),
+					e.getMessage(), e);
 			finalMessage = "ERROR = " + e.getMessage();
 		}
 

@@ -199,7 +199,7 @@ public class ControllerService {
 					httpResponse.statusCode(),
 					httpResponse.body());
 		} else {
-			logger.warn("{} Not published, JSON is empty", Common.getLogHeader(this, "publishTags"));
+			logger.warn("{} Not published, JSON is empty [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
 		}
 	}
 
