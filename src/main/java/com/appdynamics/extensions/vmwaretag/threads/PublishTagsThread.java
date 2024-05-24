@@ -75,6 +75,41 @@ public class PublishTagsThread extends Thread {
 					}
 				}
 
+				for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
+					listTagKey = controllerService.getTags(apmCorrelation.getAppId(), EntityType.Application);
+					logger.debug(("{} Deleting tags for Application [{}]"),
+							Common.getLogHeader(this, "run"),
+							server.getServerName());
+					for (TagKeys tagKey : listTagKey) {
+						if (tagKey.getKey().toLowerCase().contains("esx ")) {
+							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getAppId(),
+									EntityType.Application);
+						}
+					}
+
+					listTagKey = controllerService.getTags(apmCorrelation.getTierId(), EntityType.Tier);
+					logger.debug(("{} Deleting tags for Tier [{}]"),
+							Common.getLogHeader(this, "run"),
+							server.getServerName());
+					for (TagKeys tagKey : listTagKey) {
+						if (tagKey.getKey().toLowerCase().contains("esx ")) {
+							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getTierId(),
+									EntityType.Tier);
+						}
+					}
+
+					listTagKey = controllerService.getTags(apmCorrelation.getNodeId(), EntityType.Node);
+					logger.debug(("{} Deleting tags for node [{}]"),
+							Common.getLogHeader(this, "run"),
+							server.getServerName());
+					for (TagKeys tagKey : listTagKey) {
+						if (tagKey.getKey().toLowerCase().contains("esx ")) {
+							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getNodeId(),
+									EntityType.Node);
+						}
+					}
+				}
+
 				// Publish after each number of servers entities found, regardless of
 				// correlation
 				if (idx > 0 && idx % 10 == 0) {
@@ -217,16 +252,16 @@ public class PublishTagsThread extends Thread {
 		List<TagKeys> listKeys = new ArrayList<>();
 
 		listKeys = new ArrayList<>();
-
 		TagKeys tagKey = new TagKeys();
-		tagKey.setKey("ESX Cluster");
-		tagKey.setValue(server.getClusterName());
-		listKeys.add(tagKey);
 
-		tagKey = new TagKeys();
-		tagKey.setKey("ESX Datacenter");
-		tagKey.setValue(server.getDatacenterName());
-		listKeys.add(tagKey);
+		// tagKey.setKey("ESX Cluster");
+		// tagKey.setValue(server.getClusterName());
+		// listKeys.add(tagKey);
+
+		// tagKey = new TagKeys();
+		// tagKey.setKey("ESX Datacenter");
+		// tagKey.setValue(server.getDatacenterName());
+		// listKeys.add(tagKey);
 
 		tagKey = new TagKeys();
 		tagKey.setKey("ESX Host Name");
@@ -243,20 +278,20 @@ public class PublishTagsThread extends Thread {
 		// tagKey.setValue(server.getVmMOR());
 		// listKeys.add(tagKey);
 
-		// tagKey = new TagKeys();
-		// tagKey.setKey("ESX Had Migration Last 24h");
-		// tagKey.setValue(server.isHadMigration() ? "yes" : "no");
-		// listKeys.add(tagKey);
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Had Migration Last 24h");
+		tagKey.setValue(server.isHadMigration() ? "yes" : "no");
+		listKeys.add(tagKey);
 
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX Overall CPU Usage");
 		// tagKey.setValue(server.getHostStats().getOverallCpuUsage() + " MHz");
 		// listKeys.add(tagKey);
 
-		// tagKey = new TagKeys();
-		// tagKey.setKey("ESX Overall CPU Usage %");
-		// tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc() + " %");
-		// listKeys.add(tagKey);
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Overall CPU Usage %");
+		tagKey.setValue(server.getHostStats().getOverallCpuUsagePerc() + " %");
+		listKeys.add(tagKey);
 
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX CPU Cores");
@@ -268,10 +303,10 @@ public class PublishTagsThread extends Thread {
 		// tagKey.setValue(server.getHostStats().getOverallMemoryUsage() + " GB");
 		// listKeys.add(tagKey);
 
-		// tagKey = new TagKeys();
-		// tagKey.setKey("ESX Overall Memory Usage %");
-		// tagKey.setValue(server.getHostStats().getOverallMemoryPerc() + " %");
-		// listKeys.add(tagKey);
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Overall Memory Usage %");
+		tagKey.setValue(server.getHostStats().getOverallMemoryPerc() + " %");
+		listKeys.add(tagKey);
 
 		// tagKey = new TagKeys();
 		// tagKey.setKey("ESX Memory Size");
