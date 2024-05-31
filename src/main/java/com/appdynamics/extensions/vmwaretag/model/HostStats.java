@@ -21,13 +21,16 @@ public class HostStats {
 		long totalHz = hostSystem.getHardware().getCpuInfo().getHz();
 		this.cpuCores = hostSystem.getHardware().getCpuInfo().getNumCpuCores();
 
-		this.overallCpuUsage = hostStats.getOverallCpuUsage();
+		int overallCpuUsage = hostStats.getOverallCpuUsage() == null ? 0 : hostStats.getOverallCpuUsage();
+		int overallMemoryUsage = hostStats.getOverallMemoryUsage() == null ? 0 : hostStats.getOverallMemoryUsage();
+
+		this.overallCpuUsage = overallCpuUsage;
 
 		double totalCapacityMHz = totalHz * this.cpuCores * 0.000001;
-		this.overallCpuUsagePerc = (int) Math.round(hostStats.getOverallCpuUsage() * 100 / totalCapacityMHz);
+		this.overallCpuUsagePerc = (int) Math.round(overallCpuUsage * 100 / totalCapacityMHz);
 
 		this.memorySize = (int) (hostSystem.getHardware().getMemorySize() / (1024 * 1024 * 1024));
-		this.overallMemoryUsage = hostStats.getOverallMemoryUsage() / 1024;
+		this.overallMemoryUsage = overallMemoryUsage / 1024;
 		this.overallMemoryPerc = Math.round(this.overallMemoryUsage * 100 / this.memorySize);
 
 		this.totalVirtualMachine = totalVirtualMachine;

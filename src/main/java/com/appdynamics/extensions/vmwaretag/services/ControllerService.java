@@ -200,11 +200,18 @@ public class ControllerService {
 			if (jsonAPI != null && !jsonAPI.equals("")) {
 				HttpResponse<String> httpResponse = getRequest("/controller/restui/tags/tagEntitiesInBatch",
 						Constants.HTTP_METHOD_POST, jsonAPI);
-				logger.info("{} Status Code [{}] payload [{}] Body [{}]",
-						Common.getLogHeader(this, "publishTags"),
-						httpResponse.statusCode(),
-						jsonAPI,
-						httpResponse.body());
+				if (httpResponse.statusCode() == 200) {
+					logger.info("{} Status Code [{}] payload [{}] ",
+							Common.getLogHeader(this, "publishTags"),
+							httpResponse.statusCode(),
+							jsonAPI);
+				} else {
+					logger.info("{} Status Code [{}] payload [{}] Body [{}]",
+							Common.getLogHeader(this, "publishTags"),
+							httpResponse.statusCode(),
+							jsonAPI,
+							httpResponse.body());
+				}
 			} else {
 				logger.warn("{} Not published, JSON is empty [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
 			}
@@ -218,10 +225,15 @@ public class ControllerService {
 
 	public void deleteTags(int entityID, EntityType entityType) throws Exception {
 		try {
-			getRequest(
+			HttpResponse<String> httpResponse = getRequest(
 					String.format("/controller/restui/tags/allTagsOnEntity?entityId=%s&entityType=%s",
 							entityID, entityType.convertToAPIEntityType()),
 					Constants.HTTP_METHOD_DELETE, "");
+			if (httpResponse.statusCode() != 200) {
+				logger.info("{} Status Code [{}] entityId [{}] entityType [{}] Body [{}]",
+						Common.getLogHeader(this, "deleteTags"),
+						httpResponse.statusCode(), entityID, entityType.convertToAPIEntityType(), httpResponse.body());
+			}
 		} catch (Exception e) {
 			logger.error("{} {}...",
 					Common.getLogHeader(this, "deleteTags"),
@@ -231,10 +243,16 @@ public class ControllerService {
 
 	public void deleteTag(int tagId, int entityID, EntityType entityType) throws Exception {
 		try {
-			getRequest(
+
+			HttpResponse<String> httpResponse = getRequest(
 					String.format("/controller/restui/tags/tagOnEntity?tagId=%s&entityId=%s&entityType=%s",
 							tagId, entityID, entityType.convertToAPIEntityType()),
 					Constants.HTTP_METHOD_DELETE, "");
+			if (httpResponse.statusCode() != 200) {
+				logger.info("{} Status Code [{}] entityId [{}] entityType [{}] Body [{}]",
+						Common.getLogHeader(this, "deleteTag"),
+						httpResponse.statusCode(), entityID, entityType.convertToAPIEntityType(), httpResponse.body());
+			}
 		} catch (Exception e) {
 			logger.error("{} {}...",
 					Common.getLogHeader(this, "deleteTag"),
@@ -244,10 +262,15 @@ public class ControllerService {
 
 	public void deleteAllTag(int entityID, EntityType entityType) throws Exception {
 		try {
-			getRequest(
+			HttpResponse<String> httpResponse = getRequest(
 					String.format("/controller/restui/tags/allTagsOnEntity?entityId=%s&entityType=%s",
 							entityID, entityType.convertToAPIEntityType()),
 					Constants.HTTP_METHOD_DELETE, "");
+			if (httpResponse.statusCode() != 200) {
+				logger.info("{} Status Code [{}] entityId [{}] entityType [{}] Body [{}]",
+						Common.getLogHeader(this, "deleteAllTag"),
+						httpResponse.statusCode(), entityID, entityType.convertToAPIEntityType(), httpResponse.body());
+			}
 		} catch (Exception e) {
 			logger.error("{} {}...",
 					Common.getLogHeader(this, "deleteAllTag"),
@@ -263,11 +286,16 @@ public class ControllerService {
 							entityID,
 							entityType.convertToAPIEntityType()),
 					Constants.HTTP_METHOD_GET, "");
+			if (httpResponse.statusCode() != 200) {
+				logger.info("{} Status Code [{}] entityId [{}] entityType [{}] Body [{}]",
+						Common.getLogHeader(this, "getTags"),
+						httpResponse.statusCode(), entityID, entityType.convertToAPIEntityType(), httpResponse.body());
+			}
 			returnValues = new ObjectMapper().readValue(httpResponse.body(), TagKeys[].class);
 		} catch (Exception e) {
-			logger.error("{} {}...",
+			logger.error("{} for entityID {} and EntityType {}: {}...",
 					Common.getLogHeader(this, "getTags"),
-					e.getMessage(), e);
+					entityID, entityType, e.getMessage(), e);
 		}
 		return returnValues;
 	}
@@ -284,15 +312,24 @@ public class ControllerService {
 					String.format("/controller/sim/v2/user/machines/%s/apmCorrelation", server.getMachineId()),
 					Constants.HTTP_METHOD_GET, "");
 
-			listApmCorrelation = new ObjectMapper().readValue(httpResponse.body(),
-					APMCorrelation[].class);
-			server.setApmCorrelation(listApmCorrelation);
+			if (httpResponse.statusCode() == 200) {
+				listApmCorrelation = new ObjectMapper().readValue(httpResponse.body(), APMCorrelation[].class);
+				server.setApmCorrelation(listApmCorrelation);
+			}
+
+			if (httpResponse.statusCode() != 200) {
+				logger.info("{} Status Code [{}] serverName [{}] Body [{}]",
+						Common.getLogHeader(this, "findAPMCorrelation"),
+						httpResponse.statusCode(), server.getServerName(), httpResponse.body());
+			}
+
 			logger.debug("{} Found correlation for [{}] different applications",
 					Common.getLogHeader(this, "findAPMCorrelation"),
 					listApmCorrelation.length);
 		} catch (Exception e) {
-			logger.error("{} {}...",
+			logger.error("{} for server {}: {}...",
 					Common.getLogHeader(this, "findAPMCorrelation"),
+					server.getServerName(),
 					e.getMessage(), e);
 		}
 

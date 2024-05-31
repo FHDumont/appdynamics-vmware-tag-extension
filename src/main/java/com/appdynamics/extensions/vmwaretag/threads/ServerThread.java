@@ -23,7 +23,7 @@ public class ServerThread extends Thread {
 
 		try {
 			controllerService.refreshServers();
-			logger.debug("{} Found {} servers (machine agent)",
+			logger.info("{} Found {} servers (machine agent)",
 					Common.getLogHeader(this, "run"),
 					this.controllerService.listServers.size());
 

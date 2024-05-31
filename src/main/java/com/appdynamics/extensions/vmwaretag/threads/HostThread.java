@@ -40,7 +40,7 @@ public class HostThread extends Thread {
 				VMWareInfo vmInfo = new VMWareInfo(vm, this.dataCenter, this.cluster, this.hostSystem, hostStats);
 				this.listVMWareInfo.put(vm.getName().toLowerCase(), vmInfo);
 			}
-			logger.debug("{} Total VMs found [{}] for this host [{}]",
+			logger.info("{} Total VMs found [{}] for this host [{}]",
 					Common.getLogHeader(this, "run"),
 					this.listVMWareInfo.size(),
 					this.hostSystem.getName());

@@ -32,17 +32,19 @@ public class MatchThread extends Thread {
 
 		this.controllerService.listServerTagged = new HashMap<>();
 
-		for (VMWareService vmwareService : listVMWareService) {
+		for (VMWareService vmwareService : this.listVMWareService) {
 			try {
 
-				logger.debug("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
-						controllerService.controllerInfo.getControllerHost(),
+				logger.info("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
+						this.controllerService.controllerInfo.getControllerHost(),
 						vmwareService.getVmwareConfig().getHost());
 				Map<String, VMWareInfo> listVMs = vmwareService.getVMs();
 				Map<String, Event> listEvents = vmwareService.getEvents();
 
 				this.controllerService.listServers.forEach((serverName, serverObject) -> {
-					logger.debug("{} Testing {} ", Common.getLogHeader(this, "run"), serverName);
+					logger.debug("{} Testing [{}] and found [{}] on host [{}] ", Common.getLogHeader(this, "run"),
+							serverName,
+							listVMs.get(serverName) != null ? true : false, vmwareService.getVmwareConfig().getHost());
 
 					VMWareInfo vmHost = listVMs.get(serverName);
 					if (vmHost != null) {

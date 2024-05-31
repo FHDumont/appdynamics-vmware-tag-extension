@@ -93,15 +93,14 @@ public class DataCenterThread extends Thread {
 				thread.join();
 			}
 
-			logger.debug("{} Combining the VMs found on all hosts...", Common.getLogHeader(this, "run"));
+			logger.info("{} Combining the VMs found on all hosts...", Common.getLogHeader(this, "run"));
 			this.vmWareService.listVMWareInfo = new HashMap<>();
 			for (Thread thread : listThread) {
 				this.vmWareService.listVMWareInfo.putAll(((HostThread) thread).getVMs());
 			}
 			this.totalVMs = this.vmWareService.listVMWareInfo.size();
-			logger.debug("{} Hosts found [{}]", Common.getLogHeader(this, "run"),
+			logger.info("{} Hosts found [{}]", Common.getLogHeader(this, "run"),
 					this.vmWareService.listVMWareInfo.size());
-			logger.debug("{} ", Common.getLogHeader(this, "run"));
 
 		} catch (Exception e) {
 			logger.error("{} {}...",

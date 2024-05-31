@@ -42,6 +42,17 @@ public class PublishTagsThread extends Thread {
 
 	}
 
+	// private int findTotalTags(TagKeys[] list) throws Exception {
+	// int count = 0;
+	// for (TagKeys tagKey : list) {
+	// if (tagKey.getKey() != null &&
+	// tagKey.getKey().toLowerCase().startsWith("esx")) {
+	// count++;
+	// }
+	// }
+	// return count;
+	// }
+
 	public void run() {
 		logger.info("{} Starting publish, formatDate [{}]", Common.getLogHeader(this, "run"), this.formatDate);
 
@@ -65,54 +76,76 @@ public class PublishTagsThread extends Thread {
 				// IF NECESSARY DELETE ALL TAGS BEFORE TO CREATE NEW ONES
 				// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
 				// DELETING SERVER TAGS
-				TagKeys[] listTagKey = controllerService.getTags(server.getMachineId(), EntityType.Server);
-				logger.debug(("{} Deleting tags for server [{}]"),
-						Common.getLogHeader(this, "run"),
-						server.getServerName());
-				for (TagKeys tagKey : listTagKey) {
-					if (tagKey.getKey().toLowerCase().contains("esx ")) {
-						this.controllerService.deleteTag(tagKey.getId(), server.getMachineId(), EntityType.Server);
-					}
-				}
+				// TagKeys[] listTagKey = controllerService.getTags(server.getMachineId(),
+				// EntityType.Server);
+				// int totalTags = findTotalTags(listTagKey);
+				// if (totalTags != 0 && totalTags != 5 && totalTags != 8) {
+				// logger.info(("{} Deleting tags for server [{}], total tags [{}]"),
+				// Common.getLogHeader(this, "run"),
+				// server.getServerName(), totalTags);
+				// for (TagKeys tagKey : listTagKey) {
+				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
+				// this.controllerService.deleteTag(tagKey.getId(), server.getMachineId(),
+				// EntityType.Server);
+				// }
+				// }
+				// }
 
-				for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
-					listTagKey = controllerService.getTags(apmCorrelation.getAppId(), EntityType.Application);
-					logger.debug(("{} Deleting tags for Application [{}]"),
-							Common.getLogHeader(this, "run"),
-							server.getServerName());
-					for (TagKeys tagKey : listTagKey) {
-						if (tagKey.getKey().toLowerCase().contains("esx ")) {
-							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getAppId(),
-									EntityType.Application);
-						}
-					}
+				// try {
+				// if (server.getApmCorrelation() != null) {
+				// for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
+				// listTagKey = controllerService.getTags(apmCorrelation.getAppId(),
+				// EntityType.Application);
+				// totalTags = findTotalTags(listTagKey);
+				// if (totalTags != 0 && totalTags != 2) {
+				// logger.info(("{} Deleting tags for Application [{}], total tags [{}]"),
+				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
+				// for (TagKeys tagKey : listTagKey) {
+				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
+				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getAppId(),
+				// EntityType.Application);
+				// }
+				// }
+				// }
+				// listTagKey = controllerService.getTags(apmCorrelation.getTierId(),
+				// EntityType.Tier);
 
-					listTagKey = controllerService.getTags(apmCorrelation.getTierId(), EntityType.Tier);
-					logger.debug(("{} Deleting tags for Tier [{}]"),
-							Common.getLogHeader(this, "run"),
-							server.getServerName());
-					for (TagKeys tagKey : listTagKey) {
-						if (tagKey.getKey().toLowerCase().contains("esx ")) {
-							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getTierId(),
-									EntityType.Tier);
-						}
-					}
+				// totalTags = findTotalTags(listTagKey);
+				// if (totalTags != 0 && totalTags != 2) {
+				// logger.info(("{} Deleting tags for Tier [{}], total tags [{}]"),
+				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
+				// for (TagKeys tagKey : listTagKey) {
+				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
+				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getTierId(),
+				// EntityType.Tier);
+				// }
+				// }
+				// }
 
-					listTagKey = controllerService.getTags(apmCorrelation.getNodeId(), EntityType.Node);
-					logger.debug(("{} Deleting tags for node [{}]"),
-							Common.getLogHeader(this, "run"),
-							server.getServerName());
-					for (TagKeys tagKey : listTagKey) {
-						if (tagKey.getKey().toLowerCase().contains("esx ")) {
-							this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getNodeId(),
-									EntityType.Node);
-						}
-					}
-				}
+				// listTagKey = controllerService.getTags(apmCorrelation.getNodeId(),
+				// EntityType.Node);
+				// totalTags = findTotalTags(listTagKey);
+				// if (totalTags != 0 && totalTags != 2 && totalTags != 5) {
+				// logger.info(("{} Deleting tags for node [{}], total tags [{}]"),
+				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
+				// for (TagKeys tagKey : listTagKey) {
+				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
+				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getNodeId(),
+				// EntityType.Node);
+				// }
+				// }
+				// }
+				// }
+				// }
+				// } catch (Exception e) {
+				// logger.error("{} {}...",
+				// Common.getLogHeader(this, "run/deleting tags"),
+				// e.getMessage(), e);
+				// }
 
 				// Publish after each number of servers entities found, regardless of
 				// correlation
-				if (idx > 0 && idx % 10 == 0) {
+				if (idx > 0 && idx % 1 == 0) {
 					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
 					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
 					listServerToPublish = new ArrayList<>();
@@ -155,7 +188,7 @@ public class PublishTagsThread extends Thread {
 		tagCustom.setEntityType(entityType.convertToAPIEntityType());
 
 		if (entityType.equals(EntityType.Application)) {
-			TagEntity tagEntity;
+			TagEntity tagEntity = null;
 			for (Integer applicationId : this.listApplicationWithMigration.keySet()) {
 				tagEntity = new TagEntity();
 				tagEntity.setEntityId(applicationId);
@@ -163,9 +196,13 @@ public class PublishTagsThread extends Thread {
 				tagEntity.setTags(createTagsForAppTier(this.listApplicationWithMigration.get(applicationId)));
 				listEntities.add(tagEntity);
 			}
+			if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+				logger.warn("{} TagEntity is empty for Application [{}]", Common.getLogHeader(this, "createJsonAPI"),
+						entityType);
+			}
 
 		} else if (entityType.equals(EntityType.Tier)) {
-			TagEntity tagEntity;
+			TagEntity tagEntity = null;
 			for (Integer tierId : this.listTierWithEvent.keySet()) {
 				tagEntity = new TagEntity();
 				tagEntity.setEntityId(tierId);
@@ -173,16 +210,21 @@ public class PublishTagsThread extends Thread {
 				tagEntity.setTags(createTagsForAppTier(this.listTierWithEvent.get(tierId)));
 				listEntities.add(tagEntity);
 			}
+			if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+				logger.warn("{} TagEntity is empty for TIER [{}]", Common.getLogHeader(this, "createJsonAPI"),
+						entityType);
+			}
+
 		} else {
 			for (Server server : listServer) {
-				TagEntity tagEntity;
+				TagEntity tagEntity = null;
 
 				if (entityType.equals(EntityType.Node)) {
 					for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
 						tagEntity = new TagEntity();
 						tagEntity.setEntityId(apmCorrelation.getNodeId());
 						tagEntity.setEntityName(String.valueOf(apmCorrelation.getNodeId()));
-						tagEntity.setTags(createTagsForServerNode(server));
+						tagEntity.setTags(createTagsForNode(server));
 						listEntities.add(tagEntity);
 
 						if (apmCorrelation.getAppId() > 0) {
@@ -202,8 +244,13 @@ public class PublishTagsThread extends Thread {
 					tagEntity = new TagEntity();
 					tagEntity.setEntityName(server.getServerName());
 					tagEntity.setEntityId(server.getMachineId());
-					tagEntity.setTags(createTagsForServerNode(server));
+					tagEntity.setTags(createTagsForServer(server));
 					listEntities.add(tagEntity);
+				}
+
+				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+					logger.warn("{} TagEntity is empty [{}] [{}]", Common.getLogHeader(this, "createJsonAPI"),
+							server.getServerName(), entityType);
 				}
 
 			}
@@ -213,6 +260,8 @@ public class PublishTagsThread extends Thread {
 
 		String json = new ObjectMapper().writeValueAsString(tagCustom);
 		if (listEntities.size() == 0) {
+			logger.warn("{} listEntities is empty for [{}] and JSON [{}]", Common.getLogHeader(this, "createJsonAPI"),
+					entityType, json);
 			json = "";
 		}
 
@@ -248,7 +297,43 @@ public class PublishTagsThread extends Thread {
 		return listKeys;
 	}
 
-	private List<TagKeys> createTagsForServerNode(Server server) {
+	private List<TagKeys> createTagsForNode(Server server) {
+		List<TagKeys> listKeys = new ArrayList<>();
+
+		listKeys = new ArrayList<>();
+		TagKeys tagKey = new TagKeys();
+
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Host Name");
+		tagKey.setValue(server.getHostName());
+		listKeys.add(tagKey);
+
+		if (server.isHadMigration()) {
+			tagKey = new TagKeys();
+			tagKey.setKey("ESX Last Migration Created Date");
+			tagKey.setValue(server.getMigrationCreatedDate().toString());
+			listKeys.add(tagKey);
+
+			tagKey = new TagKeys();
+			tagKey.setKey("ESX Last Migration From");
+			tagKey.setValue(findRegex(server.getMigrationMessage().toString(), "from host ([^,]+)"));
+			listKeys.add(tagKey);
+
+			tagKey = new TagKeys();
+			tagKey.setKey("ESX Last Migration To");
+			tagKey.setValue(findRegex(server.getMigrationMessage().toString(), "to ([^,]+)"));
+			listKeys.add(tagKey);
+		}
+
+		tagKey = new TagKeys();
+		tagKey.setKey("ESX Last Update");
+		tagKey.setValue(String.valueOf(LocalDateTime.now().format(DateTimeFormatter.ofPattern(this.formatDate))));
+		listKeys.add(tagKey);
+
+		return listKeys;
+	}
+
+	private List<TagKeys> createTagsForServer(Server server) {
 		List<TagKeys> listKeys = new ArrayList<>();
 
 		listKeys = new ArrayList<>();
