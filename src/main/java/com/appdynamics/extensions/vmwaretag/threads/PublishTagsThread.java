@@ -31,27 +31,20 @@ public class PublishTagsThread extends Thread {
 	private Map<Integer, Boolean> listApplicationWithMigration;
 	private Map<Integer, Boolean> listTierWithEvent;
 	private String formatDate;
-	private List<Server> listServerToPublish;
+	private List<Object> listObjectToPublish;
+	private int sleepTime = 0;
+	private int totalTagsByCall = 50;
 
-	public PublishTagsThread(ControllerService controllerService, String formatDate) {
+	public PublishTagsThread(ControllerService controllerService, String formatDate, int sleepTime,
+			int totalTagsByCall) {
 		this.controllerService = controllerService;
 		this.formatDate = formatDate;
 		if (formatDate == null || formatDate.equals("")) {
 			formatDate = "dd/MM/yyyy HH:mm:ss";
 		}
-
+		this.sleepTime = sleepTime;
+		this.totalTagsByCall = totalTagsByCall;
 	}
-
-	// private int findTotalTags(TagKeys[] list) throws Exception {
-	// int count = 0;
-	// for (TagKeys tagKey : list) {
-	// if (tagKey.getKey() != null &&
-	// tagKey.getKey().toLowerCase().startsWith("esx")) {
-	// count++;
-	// }
-	// }
-	// return count;
-	// }
 
 	public void run() {
 		logger.info("{} Starting publish, formatDate [{}]", Common.getLogHeader(this, "run"), this.formatDate);
@@ -60,9 +53,16 @@ public class PublishTagsThread extends Thread {
 
 			listApplicationWithMigration = new HashMap<>();
 			listTierWithEvent = new HashMap<>();
-			listServerToPublish = new ArrayList<>();
+
+			// ==> SERVERS
+
+			logger.info("{} There are {} servers, it will take {} minutes to finish...",
+					Common.getLogHeader(this, "run"),
+					this.controllerService.listServerTagged.size(),
+					this.controllerService.listServerTagged.size() / this.totalTagsByCall);
 
 			int idx = 1;
+			listObjectToPublish = new ArrayList<>();
 			for (String serverName : this.controllerService.listServerTagged.keySet()) {
 				Server server = this.controllerService.listServerTagged.get(serverName);
 
@@ -71,101 +71,145 @@ public class PublishTagsThread extends Thread {
 				// SO WHEN CREATING THE JSON, YOU CAN CREATE SPECIFIC JSONS FOR EACH OBJECT TYPE
 				this.controllerService.findAPMCorrelation(server);
 
-				listServerToPublish.add(server);
-
-				// IF NECESSARY DELETE ALL TAGS BEFORE TO CREATE NEW ONES
-				// this.controllerService.deleteTags(server.getMachineId(), EntityType.Server);
-				// DELETING SERVER TAGS
-				// TagKeys[] listTagKey = controllerService.getTags(server.getMachineId(),
-				// EntityType.Server);
-				// int totalTags = findTotalTags(listTagKey);
-				// if (totalTags != 0 && totalTags != 5 && totalTags != 8) {
-				// logger.info(("{} Deleting tags for server [{}], total tags [{}]"),
-				// Common.getLogHeader(this, "run"),
-				// server.getServerName(), totalTags);
-				// for (TagKeys tagKey : listTagKey) {
-				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
-				// this.controllerService.deleteTag(tagKey.getId(), server.getMachineId(),
-				// EntityType.Server);
-				// }
-				// }
-				// }
-
-				// try {
-				// if (server.getApmCorrelation() != null) {
-				// for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
-				// listTagKey = controllerService.getTags(apmCorrelation.getAppId(),
-				// EntityType.Application);
-				// totalTags = findTotalTags(listTagKey);
-				// if (totalTags != 0 && totalTags != 2) {
-				// logger.info(("{} Deleting tags for Application [{}], total tags [{}]"),
-				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
-				// for (TagKeys tagKey : listTagKey) {
-				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
-				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getAppId(),
-				// EntityType.Application);
-				// }
-				// }
-				// }
-				// listTagKey = controllerService.getTags(apmCorrelation.getTierId(),
-				// EntityType.Tier);
-
-				// totalTags = findTotalTags(listTagKey);
-				// if (totalTags != 0 && totalTags != 2) {
-				// logger.info(("{} Deleting tags for Tier [{}], total tags [{}]"),
-				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
-				// for (TagKeys tagKey : listTagKey) {
-				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
-				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getTierId(),
-				// EntityType.Tier);
-				// }
-				// }
-				// }
-
-				// listTagKey = controllerService.getTags(apmCorrelation.getNodeId(),
-				// EntityType.Node);
-				// totalTags = findTotalTags(listTagKey);
-				// if (totalTags != 0 && totalTags != 2 && totalTags != 5) {
-				// logger.info(("{} Deleting tags for node [{}], total tags [{}]"),
-				// Common.getLogHeader(this, "run"), server.getServerName(), totalTags);
-				// for (TagKeys tagKey : listTagKey) {
-				// if (tagKey.getKey().toLowerCase().contains("esx ")) {
-				// this.controllerService.deleteTag(tagKey.getId(), apmCorrelation.getNodeId(),
-				// EntityType.Node);
-				// }
-				// }
-				// }
-				// }
-				// }
-				// } catch (Exception e) {
-				// logger.error("{} {}...",
-				// Common.getLogHeader(this, "run/deleting tags"),
-				// e.getMessage(), e);
-				// }
+				listObjectToPublish.add(server);
 
 				// Publish after each number of servers entities found, regardless of
 				// correlation
-				if (idx > 0 && idx % 1 == 0) {
-					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
-					this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
-					listServerToPublish = new ArrayList<>();
+				if (idx > 0 && idx % this.totalTagsByCall == 0) {
+					this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Server));
+					try {
+						logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+								Common.getLogHeader(this, "run"), this.sleepTime);
+						Thread.sleep(this.sleepTime);
+					} catch (Exception e) {
+						logger.error("{} {}...",
+								Common.getLogHeader(this, "run/sleep/server"),
+								e.getMessage(), e);
+					}
+
+					this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Node));
+					try {
+						logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+								Common.getLogHeader(this, "run"), this.sleepTime);
+						Thread.sleep(this.sleepTime);
+					} catch (Exception e) {
+						logger.error("{} {}...",
+								Common.getLogHeader(this, "run/sleep/server"),
+								e.getMessage(), e);
+					}
+
+					listObjectToPublish = new ArrayList<>();
 				}
 				idx += 1;
 			}
 
-			if (listServerToPublish.size() > 0) {
-				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Server));
-				this.controllerService.publishTags(createJsonAPI(listServerToPublish, EntityType.Node));
-				listServerToPublish = new ArrayList<>();
+			if (listObjectToPublish.size() > 0) {
+				this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Server));
+				try {
+					logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+							Common.getLogHeader(this, "run"), this.sleepTime);
+					Thread.sleep(this.sleepTime);
+				} catch (Exception e) {
+					logger.error("{} {}...",
+							Common.getLogHeader(this, "run/sleep/server"),
+							e.getMessage(), e);
+				}
+
+				this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Node));
+				try {
+					logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+							Common.getLogHeader(this, "run"), this.sleepTime);
+					Thread.sleep(this.sleepTime);
+				} catch (Exception e) {
+					logger.error("{} {}...",
+							Common.getLogHeader(this, "run/sleep/server"),
+							e.getMessage(), e);
+				}
 			}
 
-			this.controllerService.publishTags(createJsonAPI(null, EntityType.Application));
+			// ==> APPLICATIONS
+
+			logger.info("{} There are {} applications, it will take {} minutes to finish...",
+					Common.getLogHeader(this, "run"),
+					this.listApplicationWithMigration.size(),
+					this.listApplicationWithMigration.size() / this.totalTagsByCall);
+
+			idx = 1;
+			listObjectToPublish = new ArrayList<>();
+			for (Integer applicationId : this.listApplicationWithMigration.keySet()) {
+				listObjectToPublish.add(applicationId);
+				if (idx > 0 && idx % this.totalTagsByCall == 0) {
+					this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Application));
+					listObjectToPublish = new ArrayList<>();
+
+					try {
+						logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+								Common.getLogHeader(this, "run"), this.sleepTime);
+						Thread.sleep(this.sleepTime);
+					} catch (Exception e) {
+						logger.error("{} {}...",
+								Common.getLogHeader(this, "run/sleep/server"),
+								e.getMessage(), e);
+					}
+				}
+				idx += 1;
+			}
+			if (listObjectToPublish.size() > 0) {
+				this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Application));
+				try {
+					logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+							Common.getLogHeader(this, "run"), this.sleepTime);
+					Thread.sleep(this.sleepTime);
+				} catch (Exception e) {
+					logger.error("{} {}...",
+							Common.getLogHeader(this, "run/sleep/server"),
+							e.getMessage(), e);
+				}
+			}
+
 			this.listApplicationWithMigration.forEach((id, total) -> {
 				logger.debug(("{} Application [{}] and total events [{}]"),
 						Common.getLogHeader(this, "run"), id, total);
 			});
 
-			this.controllerService.publishTags(createJsonAPI(null, EntityType.Tier));
+			// ==> TIERS
+
+			logger.info("{} There are {} tiers, it will take {} minutes to finish...",
+					Common.getLogHeader(this, "run"),
+					this.listTierWithEvent.size(),
+					this.listTierWithEvent.size() / this.totalTagsByCall);
+
+			idx = 1;
+			listObjectToPublish = new ArrayList<>();
+			for (Integer tierId : this.listTierWithEvent.keySet()) {
+				listObjectToPublish.add(tierId);
+				if (idx > 0 && idx % this.totalTagsByCall == 0) {
+					this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Tier));
+					listObjectToPublish = new ArrayList<>();
+					try {
+						logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+								Common.getLogHeader(this, "run"), this.sleepTime);
+						Thread.sleep(this.sleepTime);
+					} catch (Exception e) {
+						logger.error("{} {}...",
+								Common.getLogHeader(this, "run/sleep/server"),
+								e.getMessage(), e);
+					}
+				}
+				idx += 1;
+			}
+			if (listObjectToPublish.size() > 0) {
+				this.controllerService.publishTags(createJsonAPI(listObjectToPublish, EntityType.Tier));
+				try {
+					logger.info("{} Waiting for next round to execute Tags API [{} ms] ",
+							Common.getLogHeader(this, "run"), this.sleepTime);
+					Thread.sleep(this.sleepTime);
+				} catch (Exception e) {
+					logger.error("{} {}...",
+							Common.getLogHeader(this, "run/sleep/server"),
+							e.getMessage(), e);
+				}
+			}
 			this.listTierWithEvent.forEach((id, total) -> {
 				logger.debug(("{} Tier [{}] and total events [{}]"),
 						Common.getLogHeader(this, "run"), id, total);
@@ -179,7 +223,7 @@ public class PublishTagsThread extends Thread {
 
 	}
 
-	private String createJsonAPI(List<Server> listServer, EntityType entityType)
+	private String createJsonAPI(List<Object> listObjectToPublish, EntityType entityType)
 			throws Exception {
 
 		TagCustom tagCustom = new TagCustom();
@@ -187,36 +231,9 @@ public class PublishTagsThread extends Thread {
 
 		tagCustom.setEntityType(entityType.convertToAPIEntityType());
 
-		if (entityType.equals(EntityType.Application)) {
-			TagEntity tagEntity = null;
-			for (Integer applicationId : this.listApplicationWithMigration.keySet()) {
-				tagEntity = new TagEntity();
-				tagEntity.setEntityId(applicationId);
-				tagEntity.setEntityName(String.valueOf(applicationId));
-				tagEntity.setTags(createTagsForAppTier(this.listApplicationWithMigration.get(applicationId)));
-				listEntities.add(tagEntity);
-			}
-			if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-				logger.warn("{} TagEntity is empty for Application [{}]", Common.getLogHeader(this, "createJsonAPI"),
-						entityType);
-			}
-
-		} else if (entityType.equals(EntityType.Tier)) {
-			TagEntity tagEntity = null;
-			for (Integer tierId : this.listTierWithEvent.keySet()) {
-				tagEntity = new TagEntity();
-				tagEntity.setEntityId(tierId);
-				tagEntity.setEntityName(String.valueOf(tierId));
-				tagEntity.setTags(createTagsForAppTier(this.listTierWithEvent.get(tierId)));
-				listEntities.add(tagEntity);
-			}
-			if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-				logger.warn("{} TagEntity is empty for TIER [{}]", Common.getLogHeader(this, "createJsonAPI"),
-						entityType);
-			}
-
-		} else {
-			for (Server server : listServer) {
+		if (entityType.equals(EntityType.Node) || entityType.equals(EntityType.Server)) {
+			for (Object aux : listObjectToPublish) {
+				Server server = (Server) aux;
 				TagEntity tagEntity = null;
 
 				if (entityType.equals(EntityType.Node)) {
@@ -249,8 +266,28 @@ public class PublishTagsThread extends Thread {
 				}
 
 				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-					logger.warn("{} TagEntity is empty [{}] [{}]", Common.getLogHeader(this, "createJsonAPI"),
+					logger.warn("{} TagEntity is empty for Server [{}] [{}]",
+							Common.getLogHeader(this, "createJsonAPI"),
 							server.getServerName(), entityType);
+				}
+
+			}
+		} else if (entityType.equals(EntityType.Application) || entityType.equals(EntityType.Tier)) {
+			for (Object aux : listObjectToPublish) {
+				Integer objectId = (Integer) aux;
+				TagEntity tagEntity = new TagEntity();
+				tagEntity.setEntityId(objectId);
+				tagEntity.setEntityName(String.valueOf(objectId));
+				tagEntity.setTags(createTagsForAppTier(
+						entityType.equals(EntityType.Application)
+								? this.listApplicationWithMigration.get(objectId)
+								: this.listTierWithEvent.get(objectId)));
+				listEntities.add(tagEntity);
+
+				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+					logger.warn("{} TagEntity is empty for Application/Tier [{}]",
+							Common.getLogHeader(this, "createJsonAPI"),
+							entityType);
 				}
 
 			}

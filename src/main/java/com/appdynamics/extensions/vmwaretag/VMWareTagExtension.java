@@ -41,6 +41,8 @@ public class VMWareTagExtension extends AManagedMonitor {
 	private List<Thread> threads;
 	private int totalMetricsPublished;
 	private String metricPrefix = "Custom Metrics|VMWare-TAG|";
+	private int sleepTime = 5000;
+	private int totalTagsByCall = 50;
 
 	@Override
 	public TaskOutput execute(Map<String, String> configMap, TaskExecutionContext taskExecutionContext)
@@ -73,6 +75,19 @@ public class VMWareTagExtension extends AManagedMonitor {
 			}
 			this.logger.info("{} Metric prefix [{}]", Common.getLogHeader(this, "run"),
 					this.metricPrefix);
+
+			if (yamlConfig.get(Constants.SLEEP_TIME) != null
+					&& !yamlConfig.get(Constants.SLEEP_TIME).equals("")) {
+				this.sleepTime = (int) yamlConfig.get(Constants.SLEEP_TIME);
+			}
+			this.logger.info("{} Sleep Time [{}]", Common.getLogHeader(this, "run"), this.sleepTime);
+
+			if (yamlConfig.get(Constants.TOTAL_TAGS_BY_CALL) != null
+					&& !yamlConfig.get(Constants.TOTAL_TAGS_BY_CALL).equals("")) {
+				this.totalTagsByCall = (int) yamlConfig.get(Constants.TOTAL_TAGS_BY_CALL);
+			}
+			this.logger.info("{} Total Tags by Call [{}]", Common.getLogHeader(this, "run"),
+					this.totalTagsByCall);
 
 			// LIST OF CONTROLLERS
 			// VSPHERE DATA IS LOADED ONLY ONCE, BUT THE CUSTOMER MAY HAVE MORE THAN ONE
@@ -206,8 +221,12 @@ public class VMWareTagExtension extends AManagedMonitor {
 			startSubTask = Instant.now();
 			this.logger.info("{} Starting publish tags threads...", Common.getLogHeader(this, "run"));
 			listControllerService.forEach((host, controlerService) -> {
-				Thread publishThread = new PublishTagsThread(controlerService,
-						String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)));
+				Thread publishThread = new PublishTagsThread(
+						controlerService,
+						String.valueOf(yamlConfig.get(Constants.FORMAT_DATE)),
+						this.sleepTime,
+						this.totalTagsByCall);
+
 				publishThread.setName(host);
 				publishThread.start();
 				threads.add(publishThread);

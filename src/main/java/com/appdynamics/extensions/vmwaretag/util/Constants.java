@@ -10,6 +10,8 @@ public class Constants {
     public static final String METRIC_PREFIX = "metricPrefix";
     public static final String FORMAT_DATE = "formatDate";
     public static final String PUBLISH_METRICS = "publishMetrics";
+    public static final String SLEEP_TIME = "sleepTime";
+    public static final String TOTAL_TAGS_BY_CALL = "totalTagsByCall";
 
     public static final String HTTP_METHOD_POST = "POST";
     public static final String HTTP_METHOD_GET = "GET";

@@ -27,3 +27,4 @@ target/**
 config.example.yml
 
 .DS_Store
+*.json

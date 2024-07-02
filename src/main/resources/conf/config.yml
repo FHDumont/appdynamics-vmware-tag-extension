@@ -16,5 +16,15 @@ controllers:
 numberOfThreads: 30
 metricPrefix: "Custom Metrics|VMWare-TAG|"
 encryptionKey: ""
+
+#date format in tags
 formatDate: dd/MM/yyyy HH:mm:ss
+
+# publish host metrics
 publishMetrics: true
+
+# waiting time between API calls
+sleepTime: 5000
+
+# total number of tags to be published in each api call
+totalTagsByCall: 50
