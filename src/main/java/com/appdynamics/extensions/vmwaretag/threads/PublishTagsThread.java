@@ -266,9 +266,12 @@ public class PublishTagsThread extends Thread {
 				}
 
 				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-					logger.warn("{} TagEntity is empty for Server [{}] [{}]",
-							Common.getLogHeader(this, "createJsonAPI"),
-							server.getServerName(), entityType);
+					if (!(entityType.equals(EntityType.Node) && server.getApmCorrelation().length == 0)) {
+						logger.warn("{} TagEntity is empty for {} [{}] [{}]",
+								Common.getLogHeader(this, "createJsonAPI"),
+								entityType.convertToAPIEntityType(),
+								server.getServerName(), entityType);
+					}
 				}
 
 			}
