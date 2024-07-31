@@ -5,6 +5,9 @@ public class AccessToken {
 	public String access_token = null;
 	public long expires_in = 0;
 
+	public AccessToken() {
+	}
+
 	public String getAccessToken() {
 		return access_token;
 	}

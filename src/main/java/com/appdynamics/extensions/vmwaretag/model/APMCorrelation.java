@@ -6,6 +6,9 @@ public class APMCorrelation {
 	private int tierId;
 	private int nodeId;
 
+	public APMCorrelation() {
+	}
+
 	public int getAppId() {
 		return appId;
 	}

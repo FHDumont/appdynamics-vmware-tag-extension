@@ -1,14 +1,18 @@
 package com.appdynamics.extensions.vmwaretag.threads;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
+import com.appdynamics.extensions.vmwaretag.model.Event;
 import com.appdynamics.extensions.vmwaretag.services.VMWareService;
 import com.appdynamics.extensions.vmwaretag.util.Common;
-import com.vmware.vim25.Event;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vmware.vim25.EventFilterSpec;
 import com.vmware.vim25.EventFilterSpecByEntity;
 import com.vmware.vim25.EventFilterSpecByTime;
@@ -43,30 +47,63 @@ public class EventsThread extends Thread {
 
 			this.totalEvents = 0;
 
-			this.eventManager = this.vmWareService.getServiceInstance().getEventManager();
-			EventHistoryCollector eventHistoryCollector = createEventHistoryCollector();
+			if (!Common.isReadJSON()) {
+				this.eventManager = this.vmWareService.getServiceInstance().getEventManager();
+				EventHistoryCollector eventHistoryCollector = createEventHistoryCollector();
 
-			Event[] listEvents = eventHistoryCollector.getLatestPage();
-			if (listEvents != null) {
-				for (Event event : listEvents) {
+				com.vmware.vim25.Event[] listEvents = eventHistoryCollector.getLatestPage();
+				if (listEvents != null) {
+					for (com.vmware.vim25.Event event : listEvents) {
 
-					logger.debug(
-							"{} Event [{}] EventID [{}] Full Formatted Message [{}] Created Time [{}] VM Reference [{} = {}]",
-							Common.getLogHeader(this, "run"),
-							event.getClass().getName(),
-							event.getKey(),
-							event.getFullFormattedMessage(),
-							event.getCreatedTime().getTime(),
-							event.getVm().getName(),
-							event.getVm().getVm().get_value());
+						logger.debug(
+								"{} Event [{}] EventID [{}] Full Formatted Message [{}] Created Time [{}] VM Reference [{} = {}]",
+								Common.getLogHeader(this, "run"),
+								event.getClass().getName(),
+								event.getKey(),
+								event.getFullFormattedMessage(),
+								event.getCreatedTime().getTime(),
+								event.getVm().getName(),
+								event.getVm().getVm().get_value());
 
-					Event eventAlreadyExist = this.vmWareService.listEvents.get(event.getVm().getName().toLowerCase());
-					if (eventAlreadyExist != null) {
-						if (eventAlreadyExist.getCreatedTime().before(event.getCreatedTime())) {
-							this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), event);
+						Event eventAlreadyExist = this.vmWareService.listEvents
+								.get(event.getVm().getName().toLowerCase());
+
+						Event newEvent = new Event();
+						newEvent.setCreatedTime(event.getCreatedTime());
+						newEvent.setMigrationMessage(event.getFullFormattedMessage());
+						newEvent.setVm(event.getVm().getName().toLowerCase());
+
+						if (eventAlreadyExist != null) {
+							if (eventAlreadyExist.getCreatedTime().before(event.getCreatedTime())) {
+								this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), newEvent);
+							}
+						} else {
+							this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), newEvent);
 						}
-					} else {
-						this.vmWareService.listEvents.put(event.getVm().getName().toLowerCase(), event);
+					}
+
+					if (Common.isSaveJSON()) {
+						Common.saveArrayListToFile(
+								"events-" + this.getName() + ".json",
+								new ArrayList<>(this.vmWareService.listEvents.values()));
+					}
+
+				}
+
+			} else {
+				File[] listOfFiles = Common.readFiles("events-");
+				for (File file : listOfFiles) {
+					if (file.isFile()) {
+						try {
+							Event[] listEvent = new ObjectMapper().readValue(file, Event[].class);
+							for (Event event : listEvent) {
+								this.vmWareService.listEvents.put(event.getVm(), event);
+							}
+						} catch (IOException e) {
+							logger.error("{} Unable read event file [{}]",
+									Common.getLogHeader(this, "run"),
+									file.getName(), e);
+						}
 					}
 				}
 			}

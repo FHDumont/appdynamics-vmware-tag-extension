@@ -24,7 +24,11 @@ formatDate: dd/MM/yyyy HH:mm:ss
 publishMetrics: true
 
 # waiting time between API calls
-sleepTime: 5000
+sleepTime: 2500
 
 # total number of tags to be published in each api call
 totalTagsByCall: 50
+
+# additional name of the Machine Agent that needs to be removed to search for the server name in the VMWare API, necessary because some customers put the domain in the MA name but vCenter does not do this
+removeDomainName:
+  - domain: .devices.company.com.br

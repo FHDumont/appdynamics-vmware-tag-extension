@@ -23,6 +23,9 @@ public class VMWareInfo {
 	private String host;
 	private HostStats hostStats;
 
+	public VMWareInfo() {
+	}
+
 	public VMWareInfo(VirtualMachine virtualMachine, String dataCenter, String cluster, HostSystem hostSystem,
 			HostStats hostStats) {
 

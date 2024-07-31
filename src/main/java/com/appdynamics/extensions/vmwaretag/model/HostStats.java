@@ -14,6 +14,9 @@ public class HostStats {
 
 	private int totalVirtualMachine;
 
+	public HostStats() {
+	}
+
 	public HostStats(HostSystem hostSystem, int totalVirtualMachine) {
 
 		HostListSummaryQuickStats hostStats = hostSystem.getSummary().getQuickStats();

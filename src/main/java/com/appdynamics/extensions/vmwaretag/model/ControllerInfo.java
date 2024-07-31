@@ -10,6 +10,9 @@ public class ControllerInfo {
 	private int proxyPort;
 	private Boolean proxySsl;
 
+	public ControllerInfo() {
+	}
+
 	public String getProxyHost() {
 		return proxyHost;
 	}

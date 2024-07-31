@@ -1,16 +1,16 @@
 package com.appdynamics.extensions.vmwaretag.services;
 
 import java.net.URL;
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
+import com.appdynamics.extensions.vmwaretag.model.Event;
 import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.model.VMWareInfo;
 import com.appdynamics.extensions.vmwaretag.util.Common;
-import com.vmware.vim25.Event;
 import com.vmware.vim25.mo.HostSystem;
 import com.vmware.vim25.mo.ServiceInstance;
 
@@ -61,7 +61,7 @@ public class VMWareService {
 
 	public Map<String, VMWareInfo> getVMs() throws Exception {
 		if (this.listVMWareInfo == null) {
-			this.listVMWareInfo = new HashMap<>();
+			this.listVMWareInfo = new ConcurrentHashMap<>();
 		}
 
 		return this.listVMWareInfo;
@@ -69,7 +69,7 @@ public class VMWareService {
 
 	public Map<String, Event> getEvents() throws Exception {
 		if (this.listEvents == null) {
-			this.listEvents = new HashMap<>();
+			this.listEvents = new ConcurrentHashMap<>();
 		}
 
 		return this.listEvents;

@@ -3,9 +3,9 @@ package com.appdynamics.extensions.vmwaretag.threads;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -32,6 +32,7 @@ public class PublishTagsThread extends Thread {
 	private Map<Integer, Boolean> listTierWithEvent;
 	private String formatDate;
 	private List<Object> listObjectToPublish;
+	private Map<String, String> listToCheckIfPublished;
 	private int sleepTime = 0;
 	private int totalTagsByCall = 50;
 
@@ -51,8 +52,8 @@ public class PublishTagsThread extends Thread {
 
 		try {
 
-			listApplicationWithMigration = new HashMap<>();
-			listTierWithEvent = new HashMap<>();
+			listApplicationWithMigration = new ConcurrentHashMap<>();
+			listTierWithEvent = new ConcurrentHashMap<>();
 
 			// ==> SERVERS
 
@@ -63,6 +64,7 @@ public class PublishTagsThread extends Thread {
 
 			int idx = 1;
 			listObjectToPublish = new ArrayList<>();
+			listToCheckIfPublished = new ConcurrentHashMap<>();
 			for (String serverName : this.controllerService.listServerTagged.keySet()) {
 				Server server = this.controllerService.listServerTagged.get(serverName);
 
@@ -72,6 +74,7 @@ public class PublishTagsThread extends Thread {
 				this.controllerService.findAPMCorrelation(server);
 
 				listObjectToPublish.add(server);
+				listToCheckIfPublished.put(serverName, serverName);
 
 				// Publish after each number of servers entities found, regardless of
 				// correlation
@@ -215,8 +218,29 @@ public class PublishTagsThread extends Thread {
 						Common.getLogHeader(this, "run"), id, total);
 			});
 
+			// APENAS LISTANDO OS SERVIDORES QUE NÃO FORAM ENCONTRADOS NO VCENTER
+			logger.info(
+					"{} Total Servers on listServers [{}] and total Servers with tags published [{}] and total Server Tagged [{}] ",
+					Common.getLogHeader(this, "run"),
+					this.controllerService.listServers.size(),
+					listToCheckIfPublished.size(),
+					this.controllerService.listServerTagged.size());
+
+			logger.info("{} Total Servers found on AppD but not found on vCenter [{}] ",
+					Common.getLogHeader(this, "run"),
+					this.controllerService.listServers.size() - listToCheckIfPublished.size());
+
+			this.controllerService.listServers.forEach((serverName, server) -> {
+				if (listToCheckIfPublished.get(serverName) == null) {
+					logger.info("{} Server found on AppD but not found on vCenter [{}] ",
+							Common.getLogHeader(this, "run"),
+							serverName);
+
+				}
+			});
+
 		} catch (Exception e) {
-			logger.error("{} {}...",
+			logger.error("{} Error trying publish tags: {}...",
 					Common.getLogHeader(this, "run"),
 					e.getMessage(), e);
 		}
@@ -228,80 +252,90 @@ public class PublishTagsThread extends Thread {
 
 		TagCustom tagCustom = new TagCustom();
 		List<TagEntity> listEntities = new ArrayList<>();
+		String json = "";
 
-		tagCustom.setEntityType(entityType.convertToAPIEntityType());
+		try {
 
-		if (entityType.equals(EntityType.Node) || entityType.equals(EntityType.Server)) {
-			for (Object aux : listObjectToPublish) {
-				Server server = (Server) aux;
-				TagEntity tagEntity = null;
+			tagCustom.setEntityType(entityType.convertToAPIEntityType());
 
-				if (entityType.equals(EntityType.Node)) {
-					for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
+			if (entityType.equals(EntityType.Node) || entityType.equals(EntityType.Server)) {
+				for (Object aux : listObjectToPublish) {
+					Server server = (Server) aux;
+					TagEntity tagEntity = null;
+
+					if (entityType.equals(EntityType.Node)) {
+						for (APMCorrelation apmCorrelation : server.getApmCorrelation()) {
+							tagEntity = new TagEntity();
+							tagEntity.setEntityId(apmCorrelation.getNodeId());
+							tagEntity.setEntityName(String.valueOf(apmCorrelation.getNodeId()));
+							tagEntity.setTags(createTagsForNode(server));
+							listEntities.add(tagEntity);
+
+							if (apmCorrelation.getAppId() > 0) {
+								Boolean hadMigration = this.listApplicationWithMigration.get(apmCorrelation.getAppId());
+								this.listApplicationWithMigration.put(apmCorrelation.getAppId(),
+										hadMigration != null && hadMigration ? true : server.isHadMigration());
+							}
+
+							if (apmCorrelation.getTierId() > 0) {
+								Boolean hadMigration = this.listTierWithEvent.get(apmCorrelation.getTierId());
+								this.listTierWithEvent.put(apmCorrelation.getTierId(),
+										hadMigration != null && hadMigration ? true : server.isHadMigration());
+							}
+						}
+
+					} else if (entityType.equals(EntityType.Server)) {
 						tagEntity = new TagEntity();
-						tagEntity.setEntityId(apmCorrelation.getNodeId());
-						tagEntity.setEntityName(String.valueOf(apmCorrelation.getNodeId()));
-						tagEntity.setTags(createTagsForNode(server));
+						tagEntity.setEntityName(server.getServerName());
+						tagEntity.setEntityId(server.getMachineId());
+						tagEntity.setTags(createTagsForServer(server));
 						listEntities.add(tagEntity);
+					}
 
-						if (apmCorrelation.getAppId() > 0) {
-							Boolean hadMigration = this.listApplicationWithMigration.get(apmCorrelation.getAppId());
-							this.listApplicationWithMigration.put(apmCorrelation.getAppId(),
-									hadMigration != null && hadMigration ? true : server.isHadMigration());
-						}
-
-						if (apmCorrelation.getTierId() > 0) {
-							Boolean hadMigration = this.listTierWithEvent.get(apmCorrelation.getTierId());
-							this.listTierWithEvent.put(apmCorrelation.getTierId(),
-									hadMigration != null && hadMigration ? true : server.isHadMigration());
+					if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+						if (!(entityType.equals(EntityType.Node) && server.getApmCorrelation().length == 0)) {
+							logger.warn("{} TagEntity is empty for {} [{}] [{}]",
+									Common.getLogHeader(this, "createJsonAPI"),
+									entityType.convertToAPIEntityType(),
+									server.getServerName(), entityType);
 						}
 					}
 
-				} else if (entityType.equals(EntityType.Server)) {
-					tagEntity = new TagEntity();
-					tagEntity.setEntityName(server.getServerName());
-					tagEntity.setEntityId(server.getMachineId());
-					tagEntity.setTags(createTagsForServer(server));
+				}
+			} else if (entityType.equals(EntityType.Application) || entityType.equals(EntityType.Tier)) {
+				for (Object aux : listObjectToPublish) {
+					Integer objectId = (Integer) aux;
+					TagEntity tagEntity = new TagEntity();
+					tagEntity.setEntityId(objectId);
+					tagEntity.setEntityName(String.valueOf(objectId));
+					tagEntity.setTags(createTagsForAppTier(
+							entityType.equals(EntityType.Application)
+									? this.listApplicationWithMigration.get(objectId)
+									: this.listTierWithEvent.get(objectId)));
 					listEntities.add(tagEntity);
-				}
 
-				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-					if (!(entityType.equals(EntityType.Node) && server.getApmCorrelation().length == 0)) {
-						logger.warn("{} TagEntity is empty for {} [{}] [{}]",
+					if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
+						logger.warn("{} TagEntity is empty for Application/Tier [{}]",
 								Common.getLogHeader(this, "createJsonAPI"),
-								entityType.convertToAPIEntityType(),
-								server.getServerName(), entityType);
+								entityType);
 					}
+
 				}
-
 			}
-		} else if (entityType.equals(EntityType.Application) || entityType.equals(EntityType.Tier)) {
-			for (Object aux : listObjectToPublish) {
-				Integer objectId = (Integer) aux;
-				TagEntity tagEntity = new TagEntity();
-				tagEntity.setEntityId(objectId);
-				tagEntity.setEntityName(String.valueOf(objectId));
-				tagEntity.setTags(createTagsForAppTier(
-						entityType.equals(EntityType.Application)
-								? this.listApplicationWithMigration.get(objectId)
-								: this.listTierWithEvent.get(objectId)));
-				listEntities.add(tagEntity);
 
-				if (tagEntity == null || tagEntity.getTags() == null || tagEntity.getTags().size() == 0) {
-					logger.warn("{} TagEntity is empty for Application/Tier [{}]",
-							Common.getLogHeader(this, "createJsonAPI"),
-							entityType);
-				}
+			tagCustom.setEntities(listEntities);
 
+			json = new ObjectMapper().writeValueAsString(tagCustom);
+			if (listEntities.size() == 0 && !entityType.equals(EntityType.Node)) {
+				logger.warn("{} listEntities is empty for [{}] and JSON [{}]",
+						Common.getLogHeader(this, "createJsonAPI"),
+						entityType, json);
+				json = "";
 			}
-		}
-
-		tagCustom.setEntities(listEntities);
-
-		String json = new ObjectMapper().writeValueAsString(tagCustom);
-		if (listEntities.size() == 0) {
-			logger.warn("{} listEntities is empty for [{}] and JSON [{}]", Common.getLogHeader(this, "createJsonAPI"),
-					entityType, json);
+		} catch (Exception e) {
+			logger.error("{} {}...",
+					Common.getLogHeader(this, "createJsonAPI"),
+					e.getMessage(), e);
 			json = "";
 		}
 

@@ -26,6 +26,9 @@ public class Server implements Cloneable {
 	// HOST STATS
 	private HostStats hostStats;
 
+	public Server() {
+	}
+
 	@Override
 	public Object clone() throws CloneNotSupportedException {
 		return super.clone();

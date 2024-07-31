@@ -1,7 +1,7 @@
 package com.appdynamics.extensions.vmwaretag.threads;
 
-import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
@@ -29,7 +29,7 @@ public class HostThread extends Thread {
 
 	public void run() {
 		logger.debug("{} Searching vms for host [{}]...", Common.getLogHeader(this, "run"), this.hostSystem.getName());
-		this.listVMWareInfo = new HashMap<>();
+		this.listVMWareInfo = new ConcurrentHashMap<>();
 		try {
 			VirtualMachine[] vmList = this.hostSystem.getVms();
 

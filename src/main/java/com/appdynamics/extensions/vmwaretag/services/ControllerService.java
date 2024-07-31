@@ -1,5 +1,6 @@
 package com.appdynamics.extensions.vmwaretag.services;
 
+import java.io.File;
 import java.net.InetSocketAddress;
 import java.net.ProxySelector;
 import java.net.URI;
@@ -7,6 +8,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpClient.Version;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -16,6 +18,7 @@ import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
 import com.appdynamics.extensions.vmwaretag.model.APMCorrelation;
 import com.appdynamics.extensions.vmwaretag.model.AccessToken;
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
+import com.appdynamics.extensions.vmwaretag.model.RemoveDomainName;
 import com.appdynamics.extensions.vmwaretag.model.Server;
 import com.appdynamics.extensions.vmwaretag.model.TagKeys;
 import com.appdynamics.extensions.vmwaretag.util.Common;
@@ -33,9 +36,11 @@ public class ControllerService {
 	public ControllerInfo controllerInfo;
 	public Map<String, Server> listServers;
 	public Map<String, Server> listServerTagged;
+	private RemoveDomainName[] listRemoveDomainName;
 
-	public ControllerService(ControllerInfo controllerInfo) throws Exception {
+	public ControllerService(ControllerInfo controllerInfo, RemoveDomainName[] listRemoveDomainName) throws Exception {
 		this.controllerInfo = controllerInfo;
+		this.listRemoveDomainName = listRemoveDomainName;
 
 		logger.info("{} Connecting to controller: [{}] using ClientId: [{}]",
 				Common.getLogHeader(this, "constructor"),
@@ -157,23 +162,48 @@ public class ControllerService {
 
 		this.listServers = new ConcurrentHashMap<>();
 
-		String payload = String.format(
-				"{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
-				System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
-		// String payload = String.format(
-		// "{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tags\":{\"ESX Had Migration Last
-		// 24h\":[\"no\",\"yes\"]},\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
-		// System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
+		if (!Common.isReadJSON()) {
+			String payload = String.format(
+					"{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
+					System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
+			// String payload = String.format(
+			// "{\"filter\":{\"appIds\":[],\"nodeIds\":[],\"tags\":{\"ESX Had Migration Last
+			// 24h\":[\"no\",\"yes\"]},\"tierIds\":[],\"types\":[\"PHYSICAL\",\"CONTAINER_AWARE\"],\"timeRangeStart\":%s,\"timeRangeEnd\":%s},\"sorter\":{\"field\":\"HEALTH\",\"direction\":\"ASC\"}}",
+			// System.currentTimeMillis(), System.currentTimeMillis() - 3600000);
 
-		HttpResponse<String> httpResponse = getRequest("/controller/sim/v2/user/machines/keys",
-				Constants.HTTP_METHOD_POST, payload);
-		String serverReponseClean = httpResponse.body().replace("],\"simEnabledMachineExists\":true}", "")
-				.replace("{\"machineKeys\":[", "");
-		serverReponseClean = "[" + serverReponseClean.replace("}{", "},{") + "]";
+			HttpResponse<String> httpResponse = getRequest("/controller/sim/v2/user/machines/keys",
+					Constants.HTTP_METHOD_POST, payload);
+			String serverReponseClean = httpResponse.body().replace("],\"simEnabledMachineExists\":true}", "")
+					.replace("{\"machineKeys\":[", "");
+			serverReponseClean = "[" + serverReponseClean.replace("}{", "},{") + "]";
 
-		Server[] servers = new ObjectMapper().readValue(serverReponseClean, Server[].class);
-		for (Server server : servers) {
-			this.listServers.put(server.getServerName().toLowerCase(), server);
+			Server[] servers = new ObjectMapper().readValue(serverReponseClean, Server[].class);
+			for (Server server : servers) {
+				String serverNameFixed = server.getServerName();
+				for (RemoveDomainName removeDomainName : listRemoveDomainName) {
+					serverNameFixed = serverNameFixed.replaceAll(removeDomainName.getDomain(), "");
+				}
+				if (!server.getServerName().equalsIgnoreCase(serverNameFixed)) {
+					logger.info("{} Server Name changed from [{}] to [{}] ",
+							Common.getLogHeader(this, "run"), server.getServerName(), serverNameFixed);
+				}
+				server.setServerName(serverNameFixed);
+
+				this.listServers.put(serverNameFixed.toLowerCase(), server);
+			}
+
+			if (Common.isSaveJSON()) {
+				Common.saveArrayListToFile(
+						"server-" + this.controllerInfo.getDisplayName() + ".json",
+						new ArrayList<>(this.listServers.values()));
+			}
+
+		} else {
+			File jsonFile = new File("json/server-" + this.controllerInfo.getDisplayName() + ".json");
+			Server[] servers = new ObjectMapper().readValue(jsonFile, Server[].class);
+			for (Server server : servers) {
+				this.listServers.put(server.getServerName().toLowerCase(), server);
+			}
 		}
 
 		logger.debug("{} Found {} servers (machine agents)", Common.getLogHeader(this, "refreshServers"),
@@ -195,16 +225,23 @@ public class ControllerService {
 	public void publishTags(String jsonAPI) throws Exception {
 		try {
 			logger.debug("{} Publishing tags", Common.getLogHeader(this, "publishTags"));
-			logger.debug("{} Tags [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
+			logger.debug("{} Tags [{}]", Common.getLogHeader(this, "publishTags"),
+					jsonAPI);
 
 			if (jsonAPI != null && !jsonAPI.equals("")) {
 				HttpResponse<String> httpResponse = getRequest("/controller/restui/tags/tagEntitiesInBatch",
 						Constants.HTTP_METHOD_POST, jsonAPI);
 				if (httpResponse.statusCode() == 200) {
-					logger.info("{} Status Code [{}] payload [{}] ",
-							Common.getLogHeader(this, "publishTags"),
-							httpResponse.statusCode(),
-							jsonAPI);
+					if (logger.isDebugEnabled()) {
+						logger.info("{} Status Code [{}] payload [{}] ",
+								Common.getLogHeader(this, "publishTags"),
+								httpResponse.statusCode(),
+								jsonAPI);
+					} else {
+						logger.info("{} Status Code [{}] ",
+								Common.getLogHeader(this, "publishTags"),
+								httpResponse.statusCode());
+					}
 				} else {
 					logger.info("{} Status Code [{}] payload [{}] Body [{}]",
 							Common.getLogHeader(this, "publishTags"),
@@ -213,14 +250,14 @@ public class ControllerService {
 							httpResponse.body());
 				}
 			} else {
-				logger.warn("{} Not published, JSON is empty [{}]", Common.getLogHeader(this, "publishTags"), jsonAPI);
+				logger.warn("{} Not published, JSON is empty [{}]", Common.getLogHeader(this,
+						"publishTags"), jsonAPI);
 			}
 		} catch (Exception e) {
 			logger.error("{} {}...",
 					Common.getLogHeader(this, "publishTags"),
 					e.getMessage(), e);
 		}
-
 	}
 
 	public void deleteTags(int entityID, EntityType entityType) throws Exception {
@@ -318,9 +355,15 @@ public class ControllerService {
 			}
 
 			if (httpResponse.statusCode() != 200) {
-				logger.info("{} Status Code [{}] serverName [{}] Body [{}]",
-						Common.getLogHeader(this, "findAPMCorrelation"),
-						httpResponse.statusCode(), server.getServerName(), httpResponse.body());
+				if (logger.isDebugEnabled()) {
+					logger.info("{} Status Code [{}] serverName [{}] Body [{}]",
+							Common.getLogHeader(this, "findAPMCorrelation"),
+							httpResponse.statusCode(), server.getServerName(), httpResponse.body());
+				} else {
+					logger.info("{} Status Code [{}] serverName [{}]",
+							Common.getLogHeader(this, "findAPMCorrelation"),
+							httpResponse.statusCode(), server.getServerName());
+				}
 			}
 
 			logger.debug("{} Found correlation for [{}] different applications",

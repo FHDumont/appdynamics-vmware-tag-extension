@@ -5,15 +5,17 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.yaml.snakeyaml.Yaml;
 
 import com.appdynamics.extensions.vmwaretag.model.ControllerInfo;
+import com.appdynamics.extensions.vmwaretag.model.RemoveDomainName;
 import com.appdynamics.extensions.vmwaretag.model.VMWareConfig;
 import com.appdynamics.extensions.vmwaretag.services.ControllerService;
 import com.appdynamics.extensions.vmwaretag.services.VMWareService;
@@ -37,6 +39,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 	private Map<String, VMWareService> listVMWareService;
 	private Map<String, ControllerService> listControllerService;
+	private RemoveDomainName[] listRemoveDomainName;
 	private Map<String, Object> yamlConfig;
 	private List<Thread> threads;
 	private int totalMetricsPublished;
@@ -54,7 +57,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 			throw new TaskExecutionException("Confluent Config File Not Set, nothing to do");
 		}
 
-		yamlConfig = new HashMap<>();
+		yamlConfig = new ConcurrentHashMap<>();
 		Instant startTime = Instant.now();
 		Instant startSubTask;
 
@@ -89,6 +92,16 @@ public class VMWareTagExtension extends AManagedMonitor {
 			this.logger.info("{} Total Tags by Call [{}]", Common.getLogHeader(this, "run"),
 					this.totalTagsByCall);
 
+			if (yamlConfig.get(Constants.REMOVE_DOMAIN_NAME) != null
+					&& !yamlConfig.get(Constants.REMOVE_DOMAIN_NAME).equals("")) {
+				this.listRemoveDomainName = new ObjectMapper()
+						.convertValue(yamlConfig.get(Constants.REMOVE_DOMAIN_NAME), RemoveDomainName[].class);
+			} else {
+				this.listRemoveDomainName = new RemoveDomainName[0];
+			}
+			this.logger.info("{} Total Remove Domain Name [{}]", Common.getLogHeader(this, "run"),
+					this.listRemoveDomainName.length);
+
 			// LIST OF CONTROLLERS
 			// VSPHERE DATA IS LOADED ONLY ONCE, BUT THE CUSTOMER MAY HAVE MORE THAN ONE
 			// CONTROLLER, SO IT SHOULD NOT GO TO VSPHERE FOR EACH CONTROLLER, IT SHOULD GO
@@ -100,9 +113,9 @@ public class VMWareTagExtension extends AManagedMonitor {
 					yamlConfig.get(Constants.CONTROLLERS),
 					ControllerInfo[].class);
 
-			listControllerService = new HashMap<>();
+			listControllerService = new ConcurrentHashMap<>();
 			for (ControllerInfo ci : listControllerInfo) {
-				listControllerService.put(ci.getControllerHost(), new ControllerService(ci));
+				listControllerService.put(ci.getControllerHost(), new ControllerService(ci, listRemoveDomainName));
 			}
 
 			// ==>VMWARE CONFIGURATIONS
@@ -110,7 +123,7 @@ public class VMWareTagExtension extends AManagedMonitor {
 					yamlConfig.get(Constants.VCENTER_SERVERS),
 					VMWareConfig[].class);
 
-			this.listVMWareService = new HashMap<>();
+			this.listVMWareService = new ConcurrentHashMap<>();
 			for (VMWareConfig vc : listVMWareConfig) {
 				listVMWareService.put(vc.getHost(), new VMWareService(vc));
 			}
@@ -126,16 +139,20 @@ public class VMWareTagExtension extends AManagedMonitor {
 
 			// CREATING THREADS FOR VMWARE SERVERS
 			// LOADING DATACENTERS, CLUSTERS, HOSTS, AND VIRTUAL MACHINES
+			AtomicInteger index = new AtomicInteger(0);
 			listVMWareService.forEach((host, vmwareService) -> {
-				// RETRIEVING VIRTUAL MACHINES
-				DataCenterThread datacenterThread = new DataCenterThread(vmwareService);
-				datacenterThread.setName(host);
-				threads.add(datacenterThread);
+				int currentIndex = index.getAndIncrement();
+				if ((Common.isReadJSON() && currentIndex == 0) || !Common.isReadJSON()) {
+					// RETRIEVING VIRTUAL MACHINES
+					DataCenterThread datacenterThread = new DataCenterThread(vmwareService);
+					datacenterThread.setName(host);
+					threads.add(datacenterThread);
 
-				// RETRIEVING MIGRATION EVENTS
-				EventsThread eventsThread = new EventsThread(vmwareService);
-				eventsThread.setName(host);
-				threads.add(eventsThread);
+					// RETRIEVING MIGRATION EVENTS
+					EventsThread eventsThread = new EventsThread(vmwareService);
+					eventsThread.setName(host);
+					threads.add(eventsThread);
+				}
 			});
 
 			startSubTask = Instant.now();

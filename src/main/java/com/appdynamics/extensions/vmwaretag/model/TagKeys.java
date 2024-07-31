@@ -7,6 +7,9 @@ public class TagKeys {
 	private String key;
 	private String value;
 
+	public TagKeys() {
+	}
+
 	public String getKey() {
 		return key;
 	}

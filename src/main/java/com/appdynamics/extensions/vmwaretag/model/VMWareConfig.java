@@ -6,6 +6,9 @@ public class VMWareConfig {
     String username;
     String password;
 
+    public VMWareConfig() {
+    }
+
     public String getDisplayName() {
         return displayName;
     }

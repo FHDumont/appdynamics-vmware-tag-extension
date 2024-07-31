@@ -8,6 +8,9 @@ public class TagEntity {
 	private int entityId;
 	private List<TagKeys> tags;
 
+	public TagEntity() {
+	}
+
 	public String getEntityName() {
 		return entityName;
 	}

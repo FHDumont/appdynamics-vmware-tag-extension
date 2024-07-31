@@ -1,18 +1,18 @@
 package com.appdynamics.extensions.vmwaretag.threads;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import org.slf4j.Logger;
 
 import com.appdynamics.extensions.logging.ExtensionsLoggerFactory;
+import com.appdynamics.extensions.vmwaretag.model.Event;
 import com.appdynamics.extensions.vmwaretag.model.Server;
 import com.appdynamics.extensions.vmwaretag.model.VMWareInfo;
 import com.appdynamics.extensions.vmwaretag.services.ControllerService;
 import com.appdynamics.extensions.vmwaretag.services.VMWareService;
 import com.appdynamics.extensions.vmwaretag.util.Common;
-import com.vmware.vim25.Event;
 
 public class MatchThread extends Thread {
 
@@ -30,21 +30,24 @@ public class MatchThread extends Thread {
 		logger.debug("{} Starting matching for controller [{}]", Common.getLogHeader(this, "run"),
 				this.controllerService.controllerInfo.getControllerHost());
 
-		this.controllerService.listServerTagged = new HashMap<>();
+		this.controllerService.listServerTagged = new ConcurrentHashMap<>();
 
 		for (VMWareService vmwareService : this.listVMWareService) {
 			try {
 
-				logger.info("{} Starting matching for cluster [{}] [{}]", Common.getLogHeader(this, "run"),
+				logger.info("{} Starting matching for cluster [{}] [{}]",
+						Common.getLogHeader(this, "run"),
 						this.controllerService.controllerInfo.getControllerHost(),
 						vmwareService.getVmwareConfig().getHost());
+
 				Map<String, VMWareInfo> listVMs = vmwareService.getVMs();
 				Map<String, Event> listEvents = vmwareService.getEvents();
 
 				this.controllerService.listServers.forEach((serverName, serverObject) -> {
 					logger.debug("{} Testing [{}] and found [{}] on host [{}] ", Common.getLogHeader(this, "run"),
 							serverName,
-							listVMs.get(serverName) != null ? true : false, vmwareService.getVmwareConfig().getHost());
+							listVMs.get(serverName) != null ? true : false,
+							vmwareService.getVmwareConfig().getHost());
 
 					VMWareInfo vmHost = listVMs.get(serverName);
 					if (vmHost != null) {
@@ -64,12 +67,14 @@ public class MatchThread extends Thread {
 								logger.debug("{}     --> Event found", Common.getLogHeader(this, "run"));
 								vmServerTagged.setHadMigration(true);
 								vmServerTagged.setMigrationCreatedDate(event.getCreatedTime().getTime());
-								vmServerTagged.setMigrationMessage(event.getFullFormattedMessage());
+								vmServerTagged.setMigrationMessage(event.getMigrationMessage());
 							}
 
 							this.controllerService.listServerTagged.put(serverName, vmServerTagged);
 						} catch (CloneNotSupportedException e) {
-							e.printStackTrace();
+							logger.error("{} {}...",
+									Common.getLogHeader(this, "run"),
+									e.getMessage(), e);
 						}
 
 					}
